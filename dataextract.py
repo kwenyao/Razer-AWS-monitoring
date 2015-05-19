@@ -3,6 +3,7 @@ __author__ = 'Koh Wen Yao'
 import boto.ec2 as ec2
 import boto.ec2.cloudwatch as cwatch
 import datetime
+import time
 import constants as c
 import mysql.connector
 import mysql_statements as s
@@ -33,7 +34,7 @@ def getDataPoints(metric, start, end):
     if unit is None:
         return None
     else:
-        return metric.query(start, end, c.EC2_METRIC_STAT_TYPE, unit)
+        return metric.query(start, end, c.EC2_METRIC_STAT_TYPE, unit, period=60)
 
 
 def insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor):
@@ -62,7 +63,7 @@ def insertMetricsToDB(metrics, securityGrpDict, instanceInfo, mysqlConn):
     for metric in metrics:
         metricString = str(metric)[7:]
         datapoints = getDataPoints(metric, start, end)
-        instanceId = metric.dimensions.get('InstanceId')[0][2:]
+        instanceId = metric.dimensions.get('InstanceId')[0].replace('-', '_')
         securityGroups = securityGrpDict.get(instanceId)
         metricTuple = (instanceId, metricString) + instanceInfo.get(instanceId)
         if datapoints is None:
@@ -79,13 +80,14 @@ def buildSecurityGrpDictionary(ec2connection):
         instances = group.instances()
         if instances:
             for instance in instances:
-                securityGrpList = securityGrpDict.get(str(instance)[11:])
+                instanceId = str(instance)[9:].replace('-', '_')
+                securityGrpList = securityGrpDict.get(instanceId)
                 if securityGrpList is not None:
                     securityGrpList.append(group)
-                    securityGrpDict[str(instance)[11:]] = securityGrpList
+                    securityGrpDict[instanceId] = securityGrpList
                 else:
                     securityGrpList = [group]
-                    securityGrpDict[str(instance)[11:]] = securityGrpList
+                    securityGrpDict[instanceId] = securityGrpList
     return securityGrpDict
 
 
@@ -94,13 +96,15 @@ def extractInstance(reservationList):
     instanceInfo = {}
     for reservation in reservationList:
         instance = reservation.instances[0]
-        instanceTuple = (instance.virtualization_type, instance.instance_type, instance.key_name, instance.image_id[4:])
-        instanceInfo[instance.id[2:]] = instanceTuple
+        instanceTuple = (instance.virtualization_type, instance.instance_type,
+                         instance.key_name, instance.image_id.replace('-', '_'))
+        instanceInfo[instance.id.replace('-', '_')] = instanceTuple
         instanceIds.append(instance.id)
     return instanceIds, instanceInfo
 
 
 if __name__ == "__main__":
+    startTime = time.time()
     ec2Conn, cwConn, mysqlConn = initialiseConnections()
     securityGrpDictionary = buildSecurityGrpDictionary(ec2Conn)
     reservationList = ec2Conn.get_all_instances()
@@ -109,3 +113,4 @@ if __name__ == "__main__":
     insertMetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
     mysqlConn.commit()
     mysqlConn.close()
+    print "Execution Time: " + str(time.time() - startTime)
