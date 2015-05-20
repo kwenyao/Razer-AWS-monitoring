@@ -39,6 +39,7 @@ COLUMN_NAME_INSTANCE_ID = 'instance_id'
 COLUMN_NAME_INSTANCE_TYPE = 'instance_type'
 COLUMN_NAME_KEY_NAME = 'key_name'
 COLUMN_NAME_METRIC = 'metric'
+COLUMN_NAME_REGION = 'region'
 COLUMN_NAME_SECURITY_GRP = 'security_group'
 COLUMN_NAME_SERVICE_TYPE = 'service_type'
 COLUMN_NAME_TIMESTAMP = 'timestamp'
@@ -80,26 +81,26 @@ ELASTICSEARCH_INDEX_NAME = 'monitoring'
 # Dictionaries
 ########################################################################
 
-EC2_METRIC_UNIT_DICTIONARY = {"Metric:CPUCreditBalance": None,
-                              "Metric:CPUCreditUsage": None,
-                              "Metric:CPUUtilization": 'Percent',
-                              "Metric:DiskReadBytes": 'Bytes',
-                              "Metric:DiskReadOps": None,
-                              "Metric:DiskWriteBytes": 'Bytes',
-                              "Metric:DiskWriteOps": None,
-                              "Metric:NetworkIn": 'Bytes',
-                              "Metric:NetworkOut": 'Bytes',
-                              "Metric:StatusCheckFailed_Instance": None,
-                              "Metric:StatusCheckFailed_System": None,
-                              "Metric:StatusCheckFailed": None,
-                              "Metric:VolumeIdleTime": None,
-                              "Metric:VolumeQueueLength": None,
-                              "Metric:VolumeReadBytes": None,
-                              "Metric:VolumeReadOps": None,
-                              "Metric:VolumeTotalReadTime": None,
-                              "Metric:VolumeTotalWriteTime": None,
-                              "Metric:VolumeWriteBytes": None,
-                              "Metric:VolumeWriteOps": None
+EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": None,
+                              "CPUCreditUsage": None,
+                              "CPUUtilization": 'Percent',
+                              "DiskReadBytes": 'Bytes',
+                              "DiskReadOps": None,
+                              "DiskWriteBytes": 'Bytes',
+                              "DiskWriteOps": None,
+                              "NetworkIn": 'Bytes',
+                              "NetworkOut": 'Bytes',
+                              "StatusCheckFailed_Instance": None,
+                              "StatusCheckFailed_System": None,
+                              "StatusCheckFailed": None,
+                              "VolumeIdleTime": None,
+                              "VolumeQueueLength": None,
+                              "VolumeReadBytes": None,
+                              "VolumeReadOps": None,
+                              "VolumeTotalReadTime": None,
+                              "VolumeTotalWriteTime": None,
+                              "VolumeWriteBytes": None,
+                              "VolumeWriteOps": None
                               }
 
 EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_ACCOUNT_NAME, 'VARCHAR(32)'),
@@ -108,6 +109,7 @@ EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_ACCOUNT_NAME, 'VA
                                                   (COLUMN_NAME_INSTANCE_TYPE, 'VARCHAR(16)'),
                                                   (COLUMN_NAME_KEY_NAME, 'VARCHAR(64)'),
                                                   (COLUMN_NAME_METRIC, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_REGION, 'VARCHAR(16)'),
                                                   (COLUMN_NAME_SECURITY_GRP, 'VARCHAR(64)'),
                                                   (COLUMN_NAME_SERVICE_TYPE, 'VARCHAR(16)'),
                                                   (COLUMN_NAME_TIMESTAMP, 'DATETIME'),
