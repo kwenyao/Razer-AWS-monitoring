@@ -11,15 +11,14 @@ import shared_functions as func
 
 
 def initialiseConnections():
-    ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
-    cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
-
     # ec2connection = ec2.connect_to_region(c.EC2_REGION,
     #                                       aws_access_key_id=c.ACCESS_KEY_ID,
     #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
     # cwConnection = cwatch.connect_to_region(c.EC2_REGION,
     #                                         aws_access_key_id=c.ACCESS_KEY_ID,
     #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
+    cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
     mysqlConnection = func.connectToMySQLServer()
     return ec2connection, cwConnection, mysqlConnection
 
@@ -110,35 +109,11 @@ def extractInstance(reservationList):
 if __name__ == "__main__":
     startTime = time.time()
     ec2Conn, cwConn, mysqlConn = initialiseConnections()
-
-    connTime = time.time()
-    print "Connection time: " + str(connTime - startTime)
-
     securityGrpDictionary = buildSecurityGrpDictionary(ec2Conn)
-
-    buildSecDictTime = time.time()
-    print "Build Dict time: " + str(buildSecDictTime - connTime)
-
     reservationList = ec2Conn.get_all_instances()
-
-    getInstanceTime = time.time()
-    print "Get Instance Time: " + str(getInstanceTime - buildSecDictTime)
-
     instanceIds, instanceInfo = extractInstance(reservationList)
-
-    getInstanceInfoTime = time.time()
-    print "Extract info Time: " + str(getInstanceInfoTime - getInstanceTime)
-
     metrics = getAllMetrics(instanceIds, cwConn)
-
-    getMetricsTime = time.time()
-    print "Get Metrics Time: " + str(getMetricsTime - getInstanceInfoTime)
-
     insertMetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
-
-    insertToDBTime = time.time()
-    print "insert to db time: " + str(insertToDBTime - getMetricsTime)
-
     mysqlConn.commit()
     mysqlConn.close()
     print "Execution Time: " + str(time.time() - startTime)
