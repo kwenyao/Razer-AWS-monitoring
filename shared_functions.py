@@ -34,6 +34,6 @@ def createDatabase():
 
 def createTable(cursor):
     try:
-        cursor.execute(s.CREATE_TABLE())
+        cursor.execute(s.CREATE_EC2_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))

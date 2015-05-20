@@ -2,27 +2,37 @@ __author__ = 'Koh Wen Yao'
 
 import constants as c
 
-FIND_ALL_EC2_METRICS = ("SELECT * FROM " + c.EC2_METRICS_TABLE_NAME +
-                        " WHERE " + c.COLUMN_NAME_TIMESTAMP + " >= %s")
+FIND_ALL_EC2_METRICS = ("SELECT * FROM " + c.TABLE_NAME_EC2 +
+                        " WHERE " + c.COLUMN_NAME_EC2_TIMESTAMP + " >= %s")
 
-FIND_ALL_COLUMNS = ("SHOW COLUMNS FROM " + c.EC2_METRICS_TABLE_NAME)
+FIND_ALL_COLUMNS = ("SHOW COLUMNS FROM " + c.TABLE_NAME_EC2)
 
 CREATE_DATABASE = ("CREATE DATABASE IF NOT EXISTS " + c.DATABASE_NAME)
 
 
-def CREATE_TABLE():
-    statement1 = "CREATE TABLE IF NOT EXISTS " + c.EC2_METRICS_TABLE_NAME + "("
+def CREATE_EC2_TABLE():
+    statement1 = "CREATE TABLE IF NOT EXISTS " + c.TABLE_NAME_EC2 + "("
     statement2 = ""
     for column, dataType in c.EC2_DATAPOINT_ATTR_TYPE_DICTIONARY.iteritems():
         statement2 += column
         statement2 += " "
         statement2 += dataType + ","
-    statement3 = "PRIMARY KEY(" + c.PRIMARY_KEYS + "))"
+    statement3 = "PRIMARY KEY(" + c.PRIMARY_KEYS_EC2 + "))"
+    return statement1 + statement2 + statement3
+
+def CREATE_ELB_TABLE():
+    statement1 = "CREATE TABLE IF NOT EXISTS " + c.TABLE_NAME_ELB + "("
+    statement2 = ""
+    for column, dataType in c.EC2_DATAPOINT_ATTR_TYPE_DICTIONARY.iteritems():
+        statement2 += column
+        statement2 += " "
+        statement2 += dataType + ","
+    statement3 = "PRIMARY KEY(" + c.PRIMARY_KEYS_EC2 + "))"
     return statement1 + statement2 + statement3
 
 
 def ADD_EC2_DATAPOINTS():
-    statement1 = "INSERT INTO " + c.EC2_METRICS_TABLE_NAME + " ("
+    statement1 = "INSERT INTO " + c.TABLE_NAME_EC2 + " ("
     statement2 = ""
     for column, dataType in c.EC2_DATAPOINT_ATTR_TYPE_DICTIONARY.iteritems():
         statement2 += column + ", "

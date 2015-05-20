@@ -15,17 +15,13 @@ def initialiseConnections():
     ec2connection = ec2.connect_to_region(c.EC2_REGION,
                                           aws_access_key_id=c.ACCESS_KEY_ID,
                                           aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    elbconnection = elb.connect_to_region(c.EC2_REGION,
+    elbconnection = elb.connect_to_region(c.ELB_REGION,
                                           aws_access_key_id=c.ACCESS_KEY_ID,
                                           aws_secret_access_key=c.SECRET_ACCESS_KEY)
     cwConnection = cwatch.connect_to_region(c.EC2_REGION,
                                             aws_access_key_id=c.ACCESS_KEY_ID,
                                             aws_secret_access_key=c.SECRET_ACCESS_KEY)
 
-    loadBalancers = elbconnection.get_all_load_balancers()
-
-    # metricELB = cwConnection.list_metrics(namespace='AWS/ELB')
-    # print metricELB
     # ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
     # cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
 
@@ -33,9 +29,9 @@ def initialiseConnections():
     return ec2connection, elbconnection, cwConnection, mysqlConnection
 
 
-def getAllMetrics(instances, connection):
+def getAllEC2Metrics(instances, connection):
     metricsList = []
-    for metricName, unit in c.EC2_METRIC_UNIT_DICTIONARY.iteritems():
+    for metricName, (unit, statType) in c.EC2_METRIC_UNIT_DICTIONARY.iteritems():
         if unit is not None:
             metrics = connection.list_metrics(namespace="AWS/EC2", metric_name=metricName)
             nextToken = metrics.next_token
@@ -47,12 +43,16 @@ def getAllMetrics(instances, connection):
     return metricsList
 
 
-def getDataPoints(metric, start, end):
-    unit = c.EC2_METRIC_UNIT_DICTIONARY.get(str(metric)[7:])
+def getDataPoints(metric, start, end, service):
+    if service == 'EC2':
+        unitDict = c.EC2_METRIC_UNIT_DICTIONARY
+    elif service == 'ELB':
+        unitDict = c.ELB_METRIC_UNIT_DICTIONARY
+    unit, statType = unitDict.get(str(metric)[7:])
     if unit is None:
         return None
     else:
-        return metric.query(start, end, c.EC2_METRIC_STAT_TYPE, unit, period=60)
+        return metric.query(start, end, statType, unit, period=60)
 
 
 def insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor):
@@ -74,17 +74,16 @@ def insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor):
     return
 
 
-def insertMetricsToDB(metrics, securityGrpDict, instanceInfo, mysqlConn):
+def insertEC2MetricsToDB(metrics, securityGrpDict, instanceInfo, mysqlConn):
     mysqlCursor = mysqlConn.cursor()
     func.createTable(mysqlCursor)
     end = datetime.datetime.utcnow()
     start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
     for metric in metrics:
-        datapoints = getDataPoints(metric, start, end)
+        datapoints = getDataPoints(metric, start, end, 'EC2')
         if datapoints is None:
             continue
         else:
-            print metric
             if metric.dimensions.get('InstanceId') is None:
                 continue
             instanceId = metric.dimensions.get('InstanceId')[0].replace('-', '_')
@@ -123,7 +122,6 @@ def extractInstance(connection):
     instanceIds = []
     instanceInfo = {}
     for reservation in reservationList:
-        print reservation.instances
         instance = reservation.instances[0]
         instanceTuple = (instance.virtualization_type, instance.instance_type,
                          instance.key_name, instance.image_id.replace('-', '_'))
@@ -132,14 +130,25 @@ def extractInstance(connection):
     return instanceIds, instanceInfo
 
 
-def execute():
-    ec2Conn, cwConn, mysqlConn = initialiseConnections()
+def addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn):
     securityGrpDictionary = buildSecurityGrpDictionary(ec2Conn)
     instanceIds, instanceInfo = extractInstance(ec2Conn)
-    metrics = getAllMetrics(instanceIds, cwConn)
-    insertMetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
+    metrics = getAllEC2Metrics(instanceIds, cwConn)
+    insertEC2MetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
+
+def addAllELBDatapoints(elbConn, cwConn, mysqlConn):
+    loadBalancers = elbConn.get_all_load_balancers()
+    print loadBalancers
+    metricELB = cwConn.list_metrics(namespace='AWS/ELB')
+    print metricELB
+
+def execute():
+    ec2Conn, elbConn, cwConn, mysqlConn = initialiseConnections()
+    addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn)
+    # addAllELBDatapoints(elbConn, cwConn, mysqlConn)
     mysqlConn.commit()
     mysqlConn.close()
+
 
 if __name__ == "__main__":
     startTime = time.time()

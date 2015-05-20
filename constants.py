@@ -22,6 +22,8 @@ ACCESS_KEY_ID = 'AKIAIVATWMBLGQRVYWRA'
 SECRET_ACCESS_KEY = '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'
 ACCOUNT_NAME = 'emily'
 EC2_REGION = 'us-east-1'
+ELB_REGION = EC2_REGION
+RDS_REGION = EC2_REGION
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = 'root'
 MYSQL_HOST = 'localhost'
@@ -32,24 +34,31 @@ MYSQL_HOST = 'localhost'
 ########################################################################
 
 DATABASE_NAME = 'monitoring'
-EC2_METRICS_TABLE_NAME = 'ec2datapoints'
-COLUMN_NAME_ACCOUNT_NAME = 'account_name'
-COLUMN_NAME_AMI_ID = 'ami_id'
-COLUMN_NAME_INSTANCE_ID = 'instance_id'
-COLUMN_NAME_INSTANCE_TYPE = 'instance_type'
-COLUMN_NAME_KEY_NAME = 'key_name'
-COLUMN_NAME_METRIC = 'metric'
-COLUMN_NAME_REGION = 'region'
-COLUMN_NAME_SECURITY_GRP = 'security_group'
-COLUMN_NAME_SERVICE_TYPE = 'service_type'
-COLUMN_NAME_TIMESTAMP = 'timestamp'
-COLUMN_NAME_UNIT = 'unit'
-COLUMN_NAME_VALUE = 'value'
-COLUMN_NAME_VIRT_TYPE = 'virtualization_type'
-PRIMARY_KEYS = COLUMN_NAME_INSTANCE_ID + ', ' + \
-               COLUMN_NAME_METRIC + ', ' + \
-               COLUMN_NAME_TIMESTAMP + ', ' + \
-               COLUMN_NAME_SECURITY_GRP
+TABLE_NAME_EC2 = 'ec2datapoints'
+TABLE_NAME_ELB = 'elbdatapoints'
+COLUMN_NAME_EC2_ACCOUNT_NAME = 'account_name'
+COLUMN_NAME_EC2_AMI_ID = 'ami_id'
+COLUMN_NAME_EC2_INSTANCE_ID = 'instance_id'
+COLUMN_NAME_EC2_INSTANCE_TYPE = 'instance_type'
+COLUMN_NAME_EC2_KEY_NAME = 'key_name'
+COLUMN_NAME_EC2_METRIC = 'metric'
+COLUMN_NAME_EC2_REGION = 'region'
+COLUMN_NAME_EC2_SECURITY_GRP = 'security_group'
+COLUMN_NAME_EC2_SERVICE_TYPE = 'service_type'
+COLUMN_NAME_EC2_TIMESTAMP = 'timestamp'
+COLUMN_NAME_EC2_UNIT = 'unit'
+COLUMN_NAME_EC2_VALUE = 'value'
+COLUMN_NAME_EC2_VIRT_TYPE = 'virtualization_type'
+
+COLUMN_NAME_ELB_LOAD_BALANCER_NAME = 'name'
+COLUMN_NAME_ELB_METRIC = 'metric'
+COLUMN_NAME_ELB_UNIT = 'unit'
+COLUMN_NAME_ELB_TIMESTAMP = 'timestamp'
+
+PRIMARY_KEYS_EC2 = COLUMN_NAME_EC2_INSTANCE_ID + ', ' + \
+                   COLUMN_NAME_EC2_METRIC + ', ' + \
+                   COLUMN_NAME_EC2_TIMESTAMP + ', ' + \
+                   COLUMN_NAME_EC2_SECURITY_GRP
 
 
 ########################################################################
@@ -81,39 +90,57 @@ ELASTICSEARCH_INDEX_NAME = 'monitoring'
 # Dictionaries
 ########################################################################
 
-EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": None,
-                              "CPUCreditUsage": None,
-                              "CPUUtilization": 'Percent',
-                              "DiskReadBytes": 'Bytes',
-                              "DiskReadOps": None,
-                              "DiskWriteBytes": 'Bytes',
-                              "DiskWriteOps": None,
-                              "NetworkIn": 'Bytes',
-                              "NetworkOut": 'Bytes',
-                              "StatusCheckFailed_Instance": None,
-                              "StatusCheckFailed_System": None,
-                              "StatusCheckFailed": None,
-                              "VolumeIdleTime": None,
-                              "VolumeQueueLength": None,
-                              "VolumeReadBytes": None,
-                              "VolumeReadOps": None,
-                              "VolumeTotalReadTime": None,
-                              "VolumeTotalWriteTime": None,
-                              "VolumeWriteBytes": None,
-                              "VolumeWriteOps": None
+EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
+                              "CPUCreditUsage": (None, 'Average'),
+                              "CPUUtilization": ('Percent', 'Average'),
+                              "DiskReadBytes": ('Bytes', 'Average'),
+                              "DiskReadOps": (None, 'Average'),
+                              "DiskWriteBytes": ('Bytes', 'Average'),
+                              "DiskWriteOps": (None, 'Average'),
+                              "NetworkIn": ('Bytes', 'Average'),
+                              "NetworkOut": ('Bytes', 'Average'),
+                              "StatusCheckFailed_Instance": (None, 'Average'),
+                              "StatusCheckFailed_System": (None, 'Average'),
+                              "StatusCheckFailed": (None, 'Average'),
+                              "VolumeIdleTime": (None, 'Average'),
+                              "VolumeQueueLength": (None, 'Average'),
+                              "VolumeReadBytes": (None, 'Average'),
+                              "VolumeReadOps": (None, 'Average'),
+                              "VolumeTotalReadTime": (None, 'Average'),
+                              "VolumeTotalWriteTime": (None, 'Average'),
+                              "VolumeWriteBytes": (None, 'Average'),
+                              "VolumeWriteOps": (None, 'Average')
                               }
 
-EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_ACCOUNT_NAME, 'VARCHAR(32)'),
-                                                  (COLUMN_NAME_AMI_ID, 'VARCHAR(16)',),
-                                                  (COLUMN_NAME_INSTANCE_ID, 'VARCHAR(16)',),
-                                                  (COLUMN_NAME_INSTANCE_TYPE, 'VARCHAR(16)'),
-                                                  (COLUMN_NAME_KEY_NAME, 'VARCHAR(64)'),
-                                                  (COLUMN_NAME_METRIC, 'VARCHAR(32)'),
-                                                  (COLUMN_NAME_REGION, 'VARCHAR(16)'),
-                                                  (COLUMN_NAME_SECURITY_GRP, 'VARCHAR(64)'),
-                                                  (COLUMN_NAME_SERVICE_TYPE, 'VARCHAR(16)'),
-                                                  (COLUMN_NAME_TIMESTAMP, 'DATETIME'),
-                                                  (COLUMN_NAME_UNIT, 'VARCHAR(16)'),
-                                                  (COLUMN_NAME_VALUE, 'FLOAT'),
-                                                  (COLUMN_NAME_VIRT_TYPE, 'VARCHAR(16)')
+ELB_METRIC_UNIT_DICTIONARY = {"BackendConnectionErrors": (None, 'Sum'),
+                              "HealthyHostCount": ('Count', 'Average'),
+                              "HTTPCode_Backend_2XX": ('Count', 'Sum'),
+                              "HTTPCode_Backend_3XX": (None, 'Sum'),
+                              "HTTPCode_Backend_4XX": ('Count', 'Sum'),
+                              "HTTPCode_Backend_5XX": ('Count', 'Sum'),
+                              "HTTPCode_ELB_4XX": (None, 'Sum'),
+                              "HTTPCode_ELB_5XX": ('Count', 'Sum'),
+                              "Latency": ('Milliseconds', 'Average'),
+                              "RequestCount": ('Count', 'Sum'),
+                              "SpilloverCount": (None, 'Sum'),
+                              "SurgeQueueLength": (None, 'Sum'),
+                              "UnHealthyHostCount": ('Count', 'Average')
+                              }
+
+EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_EC2_ACCOUNT_NAME, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_EC2_AMI_ID, 'VARCHAR(16)',),
+                                                  (COLUMN_NAME_EC2_INSTANCE_ID, 'VARCHAR(16)',),
+                                                  (COLUMN_NAME_EC2_INSTANCE_TYPE, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_EC2_KEY_NAME, 'VARCHAR(64)'),
+                                                  (COLUMN_NAME_EC2_METRIC, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_EC2_REGION, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_EC2_SECURITY_GRP, 'VARCHAR(64)'),
+                                                  (COLUMN_NAME_EC2_SERVICE_TYPE, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_EC2_TIMESTAMP, 'DATETIME'),
+                                                  (COLUMN_NAME_EC2_UNIT, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_EC2_VALUE, 'FLOAT'),
+                                                  (COLUMN_NAME_EC2_VIRT_TYPE, 'VARCHAR(16)')
                                                   ])
+
+# ELB_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([()
+#                                                   ])
