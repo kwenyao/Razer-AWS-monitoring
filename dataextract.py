@@ -2,6 +2,7 @@ __author__ = 'Koh Wen Yao'
 
 import boto.ec2 as ec2
 import boto.ec2.cloudwatch as cwatch
+import boto.ec2.elb as elb
 import datetime
 import time
 import constants as c
@@ -11,28 +12,43 @@ import shared_functions as func
 
 
 def initialiseConnections():
-    # ec2connection = ec2.connect_to_region(c.EC2_REGION,
-    #                                       aws_access_key_id=c.ACCESS_KEY_ID,
-    #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    # cwConnection = cwatch.connect_to_region(c.EC2_REGION,
-    #                                         aws_access_key_id=c.ACCESS_KEY_ID,
-    #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
-    cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
+    ec2connection = ec2.connect_to_region(c.EC2_REGION,
+                                          aws_access_key_id=c.ACCESS_KEY_ID,
+                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    elbconnection = elb.connect_to_region(c.EC2_REGION,
+                                          aws_access_key_id=c.ACCESS_KEY_ID,
+                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    cwConnection = cwatch.connect_to_region(c.EC2_REGION,
+                                            aws_access_key_id=c.ACCESS_KEY_ID,
+                                            aws_secret_access_key=c.SECRET_ACCESS_KEY)
+
+    loadBalancers = elbconnection.get_all_load_balancers()
+
+    # metricELB = cwConnection.list_metrics(namespace='AWS/ELB')
+    # print metricELB
+    # ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
+    # cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
+
     mysqlConnection = func.connectToMySQLServer()
-    return ec2connection, cwConnection, mysqlConnection
+    return ec2connection, elbconnection, cwConnection, mysqlConnection
 
 
 def getAllMetrics(instances, connection):
-    metrics = []
-    for instance in instances:
-        metric = connection.list_metrics(namespace="AWS/EC2", dimensions={'InstanceId': [instance]})
-        metrics.extend(metric)
-    return metrics
+    metricsList = []
+    for metricName, unit in c.EC2_METRIC_UNIT_DICTIONARY.iteritems():
+        if unit is not None:
+            metrics = connection.list_metrics(namespace="AWS/EC2", metric_name=metricName)
+            nextToken = metrics.next_token
+            metricsList = metrics
+            while nextToken:
+                metrics = connection.list_metrics(namespace="AWS/EC2", metric_name=metricName, next_token=nextToken)
+                nextToken = metrics.next_token
+                metricsList.extend(metrics)
+    return metricsList
 
 
 def getDataPoints(metric, start, end):
-    unit = c.EC2_METRIC_UNIT_DICTIONARY.get(str(metric))
+    unit = c.EC2_METRIC_UNIT_DICTIONARY.get(str(metric)[7:])
     if unit is None:
         return None
     else:
@@ -48,7 +64,7 @@ def insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor):
         for group in securityGroups:
             securityGroup = str(group)[14:]
             # REMEMBER TO CHECK ORDER AFTER INSERTING NEW COLUMNS
-            data = (c.ACCOUNT_NAME, amiId, instanceId, instanceType, keyName, metricString,
+            data = (c.ACCOUNT_NAME, amiId, instanceId, instanceType, keyName, metricString, c.EC2_REGION,
                     securityGroup, c.EC2_SERVICE_TYPE, timestamp, unit, value, virtType)
             try:
                 mysqlCursor.execute(s.ADD_EC2_DATAPOINTS(), data)
@@ -64,15 +80,21 @@ def insertMetricsToDB(metrics, securityGrpDict, instanceInfo, mysqlConn):
     end = datetime.datetime.utcnow()
     start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
     for metric in metrics:
-        metricString = str(metric)[7:]
         datapoints = getDataPoints(metric, start, end)
-        instanceId = metric.dimensions.get('InstanceId')[0].replace('-', '_')
-        securityGroups = securityGrpDict.get(instanceId)
-        metricTuple = (instanceId, metricString) + instanceInfo.get(instanceId)
         if datapoints is None:
             continue
         else:
-            insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor)
+            print metric
+            if metric.dimensions.get('InstanceId') is None:
+                continue
+            instanceId = metric.dimensions.get('InstanceId')[0].replace('-', '_')
+            if instanceInfo.get(instanceId) is None:
+                continue
+            else:
+                securityGroups = securityGrpDict.get(instanceId)
+                metricString = str(metric)[7:]
+                metricTuple = (instanceId, metricString) + instanceInfo.get(instanceId)
+                insertDataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor)
     return
 
 
@@ -83,21 +105,25 @@ def buildSecurityGrpDictionary(ec2connection):
         instances = group.instances()
         if instances:
             for instance in instances:
-                instanceId = str(instance)[9:].replace('-', '_')
-                securityGrpList = securityGrpDict.get(instanceId)
-                if securityGrpList is not None:
-                    securityGrpList.append(group)
-                    securityGrpDict[instanceId] = securityGrpList
-                else:
-                    securityGrpList = [group]
-                    securityGrpDict[instanceId] = securityGrpList
+                if instance.state == 'running':
+                    instanceId = str(instance)[9:].replace('-', '_')
+                    securityGrpList = securityGrpDict.get(instanceId)
+                    if securityGrpList is not None:
+                        securityGrpList.append(group)
+                        securityGrpDict[instanceId] = securityGrpList
+                    else:
+                        securityGrpList = [group]
+                        securityGrpDict[instanceId] = securityGrpList
     return securityGrpDict
 
 
-def extractInstance(reservationList):
+def extractInstance(connection):
+    filter = {'instance-state-name': 'running'}
+    reservationList = connection.get_all_instances(filters=filter)
     instanceIds = []
     instanceInfo = {}
     for reservation in reservationList:
+        print reservation.instances
         instance = reservation.instances[0]
         instanceTuple = (instance.virtualization_type, instance.instance_type,
                          instance.key_name, instance.image_id.replace('-', '_'))
@@ -106,14 +132,16 @@ def extractInstance(reservationList):
     return instanceIds, instanceInfo
 
 
-if __name__ == "__main__":
-    startTime = time.time()
+def execute():
     ec2Conn, cwConn, mysqlConn = initialiseConnections()
     securityGrpDictionary = buildSecurityGrpDictionary(ec2Conn)
-    reservationList = ec2Conn.get_all_instances()
-    instanceIds, instanceInfo = extractInstance(reservationList)
+    instanceIds, instanceInfo = extractInstance(ec2Conn)
     metrics = getAllMetrics(instanceIds, cwConn)
     insertMetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
     mysqlConn.commit()
     mysqlConn.close()
+
+if __name__ == "__main__":
+    startTime = time.time()
+    execute()
     print "Execution Time: " + str(time.time() - startTime)
