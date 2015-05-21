@@ -23,7 +23,7 @@ def initialiseConnections():
                                             aws_secret_access_key=c.SECRET_ACCESS_KEY)
 
     # ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
-    # elbconnection = elb.connect_to_region(region_name=,c.ELB_REGION)
+    # elbconnection = elb.connect_to_region(region_name=c.ELB_REGION)
     # cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
 
     mysqlConnection = func.connectToMySQLServer()
@@ -125,7 +125,7 @@ def insertELBMetricsToDB(metrics, mysqlConn):
         datapoints = getDataPoints(metric, start, end, c.SERVICE_TYPE_ELB)
         if metric.dimensions.get('LoadBalancerName') is None:
             continue
-        loadBalancerName = metric.dimensions.get('LoadBalancerName')[0]
+        loadBalancerName = metric.dimensions.get('LoadBalancerName')[0].replace('-', '_')
         if datapoints is None:
             continue
         else:
@@ -155,17 +155,19 @@ def extractInstance(connection):
     filter = {'instance-state-name': 'running'}
     reservationList = connection.get_all_instances(filters=filter)
     instanceInfo = {}
+    instanceList = []
     for reservation in reservationList:
         instance = reservation.instances[0]
         instanceTuple = (instance.virtualization_type, instance.instance_type,
                          instance.key_name, instance.image_id.replace('-', '_'))
         instanceInfo[instance.id.replace('-', '_')] = instanceTuple
-    return instanceInfo
+        instanceList.append(instance.id)
+    return instanceList, instanceInfo
 
 
 def addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn):
     securityGrpDictionary = buildSecurityGrpDictionary(ec2Conn)
-    instanceInfo = extractInstance(ec2Conn)
+    instanceList, instanceInfo = extractInstance(ec2Conn)
     metrics = getAllMetrics(cwConn, c.SERVICE_TYPE_EC2)
     insertEC2MetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
 

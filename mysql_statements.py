@@ -60,3 +60,7 @@ def ADD_ELB_DATAPOINTS():
     statement3 = statement3[:-2]
     statement3 += ")"
     return statement1 + statement2 + statement3
+
+DATA_RETRIEVAL_DICTIONARY = {c.SERVICE_TYPE_EC2: FIND_ALL_EC2_METRICS,
+                             c.SERVICE_TYPE_ELB: FIND_ALL_ELB_METRICS
+                             }

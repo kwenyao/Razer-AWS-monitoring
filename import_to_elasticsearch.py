@@ -9,22 +9,23 @@ import mysql.connector
 from elasticsearch import Elasticsearch
 
 def buildBulkBody(cursor):
-    columns = tuple([d[0].decode('utf8') for d in cursor.description])
-    dictionary = {}
-    queryResult = []
-    index = 0
-    for row in cursor:
-        dictionary['index'] = {}
-        queryResult.append(dictionary)
-        queryResult.append(dict(zip(columns, row)))
-        index += 1
-    return queryResult
+    if cursor is None:
+        return None
+    else:
+        columns = tuple([d[0].decode('utf8') for d in cursor.description])
+        dictionary = {}
+        queryResult = []
+        for row in cursor:
+            dictionary['index'] = {}
+            queryResult.append(dictionary)
+            queryResult.append(dict(zip(columns, row)))
+        return queryResult
 
 
-def pushDataToElasticsearch(queryResult, nowTime):
+def pushDataToElasticsearch(queryResult, nowTime, service):
     es = Elasticsearch([c.ELASTICSEARCH_URL])
     index = 'monitoring'
-    type = func.convertDateTimeToString(nowTime)
+    type = service.lower()
     response = es.bulk(index=index, doc_type=type, body=queryResult)
     print "Errors: " + str(response.get('errors'))
     es.indices.refresh(index=index)
@@ -34,13 +35,15 @@ def getDataFromDB(cursor):
     nowTime = datetime.datetime.utcnow()
     startTime = nowTime - datetime.timedelta(minutes=c.DATA_RETRIEVAL_TIME_DELTA_MINUTES)
     startTimeString = func.convertDateTimeToString(startTime)
-    try:
-        cursor.execute(s.FIND_ALL_EC2_METRICS, (startTimeString,))
-    except mysql.connector.Error as err:
-        print("MYSQL Error: {}".format(err))
-    queryResult = buildBulkBody(cursor)
-    if queryResult:
-        pushDataToElasticsearch(queryResult, nowTime)
+    for service, query in s.DATA_RETRIEVAL_DICTIONARY.iteritems():
+        print "pushing " + service + " data into elasticsearch"
+        try:
+            cursor.execute(query, (startTimeString,))
+        except mysql.connector.Error as err:
+            print("MYSQL Error: {}".format(err))
+        queryResult = buildBulkBody(cursor)
+        if queryResult:
+            pushDataToElasticsearch(queryResult, nowTime, service)
 
 
 if __name__ == "__main__":
