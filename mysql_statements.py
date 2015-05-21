@@ -44,7 +44,7 @@ def ADD_EC2_DATAPOINTS():
     for x in range(0, len(c.EC2_DATAPOINT_ATTR_TYPE_DICTIONARY)):
         statement3 += "%s, "
     statement3 = statement3[:-2]
-    statement3 += ")"
+    statement3 += ") ON DUPLICATE KEY UPDATE " + c.COLUMN_NAME_EC2_VALUE + "=VALUES(" + c.COLUMN_NAME_EC2_VALUE + ")"
     return statement1 + statement2 + statement3
 
 
@@ -58,7 +58,7 @@ def ADD_ELB_DATAPOINTS():
     for x in range(0, len(c.ELB_DATAPOINT_ATTR_TYPE_DICTIONARY)):
         statement3 += "%s, "
     statement3 = statement3[:-2]
-    statement3 += ")"
+    statement3 += ") ON DUPLICATE KEY UPDATE " + c.COLUMN_NAME_ELB_VALUE + "=VALUES(" + c.COLUMN_NAME_ELB_VALUE + ")"
     return statement1 + statement2 + statement3
 
 DATA_RETRIEVAL_DICTIONARY = {c.SERVICE_TYPE_EC2: FIND_ALL_EC2_METRICS,
