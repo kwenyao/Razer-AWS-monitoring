@@ -12,19 +12,19 @@ import shared_functions as func
 
 
 def initialiseConnections():
-    ec2connection = ec2.connect_to_region(c.EC2_REGION,
-                                          aws_access_key_id=c.ACCESS_KEY_ID,
-                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    elbconnection = elb.connect_to_region(c.ELB_REGION,
-                                          aws_access_key_id=c.ACCESS_KEY_ID,
-                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    cwConnection = cwatch.connect_to_region(c.EC2_REGION,
-                                            aws_access_key_id=c.ACCESS_KEY_ID,
-                                            aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # ec2connection = ec2.connect_to_region(c.EC2_REGION,
+    #                                       aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # elbconnection = elb.connect_to_region(c.ELB_REGION,
+    #                                       aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # cwConnection = cwatch.connect_to_region(c.EC2_REGION,
+    #                                         aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
 
-    # ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
-    # elbconnection = elb.connect_to_region(region_name=c.ELB_REGION)
-    # cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
+    ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
+    elbconnection = elb.connect_to_region(region_name=c.ELB_REGION)
+    cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
 
     mysqlConnection = func.connectToMySQLServer()
     return ec2connection, elbconnection, cwConnection, mysqlConnection
@@ -48,12 +48,17 @@ def getAllMetrics(connection, service):
                 metrics = connection.list_metrics(namespace=namespace, metric_name=metricName, next_token=nextToken)
                 nextToken = metrics.next_token
                 metricsList.extend(metrics)
-    return metricsList
+    filtered_metric_list = []
+    for metric in metricsList:
+        if not metric.dimensions.get("AvailabilityZone"):
+            filtered_metric_list.append(metric)
+    return filtered_metric_list
 
 
 def getDataPoints(metric, start, end, service):
     unitDict = getMetricDictionary(service)
     unit, statType = unitDict.get(str(metric)[7:])
+
     if unit is None:
         return None
     else:

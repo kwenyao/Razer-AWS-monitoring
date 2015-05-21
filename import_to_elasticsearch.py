@@ -8,17 +8,24 @@ import time
 import mysql.connector
 from elasticsearch import Elasticsearch
 
-def buildBulkBody(cursor):
+def buildBulkBody(cursor, service):
+    columnAcctName, columnName, columnMetric, columnTimestamp = c.COLUMN_NAME_DICTIONARY.get(service)
     if cursor is None:
         return None
     else:
         columns = tuple([d[0].decode('utf8') for d in cursor.description])
-        dictionary = {}
         queryResult = []
         for row in cursor:
-            dictionary['index'] = {}
+            dictionary = {}
+            resultDict = dict(zip(columns, row))
+            acctName = resultDict.get(columnAcctName)
+            name = resultDict.get(columnName)
+            metric = resultDict.get(columnMetric)
+            timestamp = func.convertDateTimeToString(resultDict.get(columnTimestamp))
+            id = (acctName + name + metric + timestamp).replace(' ', '')
+            dictionary['index'] = {"_id": id}
             queryResult.append(dictionary)
-            queryResult.append(dict(zip(columns, row)))
+            queryResult.append(resultDict)
         return queryResult
 
 
@@ -38,10 +45,11 @@ def getDataFromDB(cursor):
     for service, query in s.DATA_RETRIEVAL_DICTIONARY.iteritems():
         print "pushing " + service + " data into elasticsearch"
         try:
+            # cursor.execute(s.FIND_ALL) # FOR TESTING ONLY
             cursor.execute(query, (startTimeString,))
         except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
-        queryResult = buildBulkBody(cursor)
+        queryResult = buildBulkBody(cursor, service)
         if queryResult:
             pushDataToElasticsearch(queryResult, nowTime, service)
 

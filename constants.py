@@ -86,6 +86,7 @@ KIBANA_PORT = "5601"
 EC2_METRIC_STAT_TYPE = 'Average'  # 'Minimum', 'Maximum', 'Sum', 'Average', 'SampleCount'
 SERVICE_TYPE_EC2 = 'EC2'
 SERVICE_TYPE_ELB = 'ELB'
+SERVICE_TYPE_RDS = 'RDS'
 
 
 ########################################################################
@@ -99,10 +100,16 @@ ELASTICSEARCH_INDEX_NAME = 'monitoring'
 # Dictionaries
 ########################################################################
 
-NAMESPACE_DICTIONARY = {"EC2": "AWS/EC2",
-                        "ELB": "AWS/ELB",
-                        "RDS": "AWS/RDS"
+NAMESPACE_DICTIONARY = {SERVICE_TYPE_EC2: "AWS/EC2",
+                        SERVICE_TYPE_ELB: "AWS/ELB",
+                        SERVICE_TYPE_RDS: "AWS/RDS"
                         }
+
+COLUMN_NAME_DICTIONARY = {SERVICE_TYPE_EC2: (COLUMN_NAME_EC2_ACCOUNT_NAME, COLUMN_NAME_EC2_INSTANCE_ID,
+                                             COLUMN_NAME_EC2_METRIC, COLUMN_NAME_EC2_TIMESTAMP),
+                          SERVICE_TYPE_ELB: (COLUMN_NAME_ELB_ACCOUNT_NAME, COLUMN_NAME_ELB_LOAD_BALANCER_NAME,
+                                             COLUMN_NAME_ELB_METRIC, COLUMN_NAME_ELB_TIMESTAMP)
+                          }
 
 EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
                               "CPUCreditUsage": (None, 'Average'),
