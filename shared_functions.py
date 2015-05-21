@@ -32,8 +32,15 @@ def createDatabase():
     connection.close()
 
 
-def createTable(cursor):
+def createEC2Table(cursor):
     try:
         cursor.execute(s.CREATE_EC2_TABLE())
+    except mysql.connector.Error as err:
+            print("MYSQL Error: {}".format(err))
+
+
+def createELBTable(cursor):
+    try:
+        cursor.execute(s.CREATE_ELB_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))

@@ -6,8 +6,8 @@ from collections import OrderedDict
 # Duration/Interval Constants
 ########################################################################
 
-SCRIPT_RUN_INTERVAL_MINUTES = 1
-DATA_RETRIEVAL_BUFFER_MINUTES = 2
+SCRIPT_RUN_INTERVAL_MINUTES = 3
+DATA_RETRIEVAL_BUFFER_MINUTES = 5
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
 
@@ -50,15 +50,23 @@ COLUMN_NAME_EC2_UNIT = 'unit'
 COLUMN_NAME_EC2_VALUE = 'value'
 COLUMN_NAME_EC2_VIRT_TYPE = 'virtualization_type'
 
-COLUMN_NAME_ELB_LOAD_BALANCER_NAME = 'name'
+COLUMN_NAME_ELB_ACCOUNT_NAME = 'account_name'
+COLUMN_NAME_ELB_LOAD_BALANCER_NAME = 'load_balancer_name'
 COLUMN_NAME_ELB_METRIC = 'metric'
-COLUMN_NAME_ELB_UNIT = 'unit'
+COLUMN_NAME_ELB_REGION = 'region'
 COLUMN_NAME_ELB_TIMESTAMP = 'timestamp'
+COLUMN_NAME_ELB_SERVICE_TYPE = 'service_type'
+COLUMN_NAME_ELB_UNIT = 'unit'
+COLUMN_NAME_ELB_VALUE = 'value'
 
 PRIMARY_KEYS_EC2 = COLUMN_NAME_EC2_INSTANCE_ID + ', ' + \
-                   COLUMN_NAME_EC2_METRIC + ', ' + \
-                   COLUMN_NAME_EC2_TIMESTAMP + ', ' + \
-                   COLUMN_NAME_EC2_SECURITY_GRP
+    COLUMN_NAME_EC2_METRIC + ', ' + \
+    COLUMN_NAME_EC2_TIMESTAMP + ', ' + \
+    COLUMN_NAME_EC2_SECURITY_GRP
+
+PRIMARY_KEYS_ELB = COLUMN_NAME_ELB_LOAD_BALANCER_NAME + ', ' + \
+    COLUMN_NAME_ELB_METRIC + ', ' + \
+    COLUMN_NAME_ELB_TIMESTAMP
 
 
 ########################################################################
@@ -76,7 +84,8 @@ KIBANA_PORT = "5601"
 ########################################################################
 
 EC2_METRIC_STAT_TYPE = 'Average'  # 'Minimum', 'Maximum', 'Sum', 'Average', 'SampleCount'
-EC2_SERVICE_TYPE = 'EC2'
+SERVICE_TYPE_EC2 = 'EC2'
+SERVICE_TYPE_ELB = 'ELB'
 
 
 ########################################################################
@@ -89,6 +98,11 @@ ELASTICSEARCH_INDEX_NAME = 'monitoring'
 ########################################################################
 # Dictionaries
 ########################################################################
+
+NAMESPACE_DICTIONARY = {"EC2": "AWS/EC2",
+                        "ELB": "AWS/ELB",
+                        "RDS": "AWS/RDS"
+                        }
 
 EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
                               "CPUCreditUsage": (None, 'Average'),
@@ -142,5 +156,12 @@ EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_EC2_ACCOUNT_NAME,
                                                   (COLUMN_NAME_EC2_VIRT_TYPE, 'VARCHAR(16)')
                                                   ])
 
-# ELB_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([()
-#                                                   ])
+ELB_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_ELB_ACCOUNT_NAME, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_ELB_LOAD_BALANCER_NAME, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_ELB_METRIC, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_ELB_REGION, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_ELB_SERVICE_TYPE, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_ELB_TIMESTAMP, 'DATETIME'),
+                                                  (COLUMN_NAME_ELB_UNIT, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_ELB_VALUE, 'FLOAT'),
+                                                  ])
