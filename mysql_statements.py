@@ -15,6 +15,15 @@ FIND_ALL_COLUMNS = ("SHOW COLUMNS FROM " + c.TABLE_NAME_EC2)
 CREATE_DATABASE = ("CREATE DATABASE IF NOT EXISTS " + c.DATABASE_NAME)
 
 
+def buildPrimaryKey(service):
+    primaryKeys = c.PRIMARY_KEY_DICTIONARY.get(service)
+    string = ''
+    for primaryKey in primaryKeys:
+        string += primaryKey
+        string += ', '
+    return string[:-2]
+
+
 def CREATE_EC2_TABLE():
     statement1 = "CREATE TABLE IF NOT EXISTS " + c.TABLE_NAME_EC2 + "("
     statement2 = ""
@@ -22,8 +31,10 @@ def CREATE_EC2_TABLE():
         statement2 += column
         statement2 += " "
         statement2 += dataType + ","
-    statement3 = "PRIMARY KEY(" + c.PRIMARY_KEYS_EC2 + "))"
+    primaryKey = buildPrimaryKey(c.SERVICE_TYPE_EC2)
+    statement3 = "PRIMARY KEY(" + primaryKey + "))"
     return statement1 + statement2 + statement3
+
 
 def CREATE_ELB_TABLE():
     statement1 = "CREATE TABLE IF NOT EXISTS " + c.TABLE_NAME_ELB + "("
@@ -32,7 +43,8 @@ def CREATE_ELB_TABLE():
         statement2 += column
         statement2 += " "
         statement2 += dataType + ","
-    statement3 = "PRIMARY KEY(" + c.PRIMARY_KEYS_ELB + "))"
+    primaryKey = buildPrimaryKey(c.SERVICE_TYPE_ELB)
+    statement3 = "PRIMARY KEY(" + primaryKey + "))"
     return statement1 + statement2 + statement3
 
 

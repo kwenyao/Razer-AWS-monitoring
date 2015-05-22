@@ -59,14 +59,36 @@ COLUMN_NAME_ELB_SERVICE_TYPE = 'service_type'
 COLUMN_NAME_ELB_UNIT = 'unit'
 COLUMN_NAME_ELB_VALUE = 'value'
 
-PRIMARY_KEYS_EC2 = COLUMN_NAME_EC2_INSTANCE_ID + ', ' + \
-    COLUMN_NAME_EC2_METRIC + ', ' + \
-    COLUMN_NAME_EC2_TIMESTAMP + ', ' + \
-    COLUMN_NAME_EC2_SECURITY_GRP
+COLUMN_NAME_RDS_ACCOUNT_NAME = 'account_name'
+COLUMN_NAME_RDS_ENGINE = 'engine'
+COLUMN_NAME_RDS_INSTANCE_CLASS = 'instance_class'
+COLUMN_NAME_RDS_METRIC = 'metric'
+COLUMN_NAME_RDS_MULTI_AZ = 'multi_az'
+COLUMN_NAME_RDS_NAME = 'name'
+COLUMN_NAME_RDS_REGION = 'region'
+COLUMN_NAME_RDS_SECURITY_GRP = 'security_group'
+COLUMN_NAME_RDS_TIMESTAMP = 'timestamp'
+COLUMN_NAME_RDS_VALUE = 'value'
 
-PRIMARY_KEYS_ELB = COLUMN_NAME_ELB_LOAD_BALANCER_NAME + ', ' + \
-    COLUMN_NAME_ELB_METRIC + ', ' + \
-    COLUMN_NAME_ELB_TIMESTAMP
+PRIMARY_KEYS_EC2 = [COLUMN_NAME_EC2_ACCOUNT_NAME,
+                    COLUMN_NAME_EC2_REGION,
+                    COLUMN_NAME_EC2_INSTANCE_ID,
+                    COLUMN_NAME_EC2_METRIC,
+                    COLUMN_NAME_EC2_SECURITY_GRP,
+                    COLUMN_NAME_EC2_TIMESTAMP]
+
+PRIMARY_KEYS_ELB = [COLUMN_NAME_ELB_ACCOUNT_NAME,
+                    COLUMN_NAME_ELB_REGION,
+                    COLUMN_NAME_ELB_LOAD_BALANCER_NAME,
+                    COLUMN_NAME_ELB_METRIC,
+                    COLUMN_NAME_ELB_TIMESTAMP]
+
+PRIMARY_KEYS_RDS = [COLUMN_NAME_ELB_ACCOUNT_NAME,
+                    COLUMN_NAME_RDS_REGION,
+                    COLUMN_NAME_RDS_NAME,
+                    COLUMN_NAME_RDS_METRIC,
+                    COLUMN_NAME_RDS_SECURITY_GRP,
+                    COLUMN_NAME_RDS_TIMESTAMP]
 
 
 ########################################################################
@@ -80,7 +102,7 @@ KIBANA_PORT = "5601"
 
 
 ########################################################################
-# EC2 Constants
+# Service Constants
 ########################################################################
 
 EC2_METRIC_STAT_TYPE = 'Average'  # 'Minimum', 'Maximum', 'Sum', 'Average', 'SampleCount'
@@ -105,10 +127,8 @@ NAMESPACE_DICTIONARY = {SERVICE_TYPE_EC2: "AWS/EC2",
                         SERVICE_TYPE_RDS: "AWS/RDS"
                         }
 
-COLUMN_NAME_DICTIONARY = {SERVICE_TYPE_EC2: (COLUMN_NAME_EC2_ACCOUNT_NAME, COLUMN_NAME_EC2_INSTANCE_ID,
-                                             COLUMN_NAME_EC2_METRIC, COLUMN_NAME_EC2_TIMESTAMP),
-                          SERVICE_TYPE_ELB: (COLUMN_NAME_ELB_ACCOUNT_NAME, COLUMN_NAME_ELB_LOAD_BALANCER_NAME,
-                                             COLUMN_NAME_ELB_METRIC, COLUMN_NAME_ELB_TIMESTAMP)
+PRIMARY_KEY_DICTIONARY = {SERVICE_TYPE_EC2: PRIMARY_KEYS_EC2,
+                          SERVICE_TYPE_ELB: PRIMARY_KEYS_ELB,
                           }
 
 EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
@@ -141,12 +161,31 @@ ELB_METRIC_UNIT_DICTIONARY = {"BackendConnectionErrors": (None, 'Sum'),
                               "HTTPCode_Backend_5XX": ('Count', 'Sum'),
                               "HTTPCode_ELB_4XX": (None, 'Sum'),
                               "HTTPCode_ELB_5XX": ('Count', 'Sum'),
-                              "Latency": ('Milliseconds', 'Average'),
+                              "Latency": ('Seconds', 'Average'),
                               "RequestCount": ('Count', 'Sum'),
                               "SpilloverCount": (None, 'Sum'),
                               "SurgeQueueLength": (None, 'Sum'),
                               "UnHealthyHostCount": ('Count', 'Average')
                               }
+
+RDS_METRIC_UNIT_DICTIONARY = {"BinLogDiskUsage": ('Bytes', 'Average'),
+                              "CPUUtilization": ('Percent', 'Average'),
+                              "CPUCreditUsage":  (None, 'Average'),
+                              "CPUCreditBalance": (None, 'Average'),
+                              "DatabaseConnections": ('Count', 'Average'),
+                              "DiskQueueDepth": ('Count', 'Average'),
+                              "FreeableMemory": ('Bytes', 'Average'),
+                              "FreeStorageSpace": ('Bytes', 'Average'),
+                              "ReplicaLag": ('Seconds', 'Average'),
+                              "SwapUsage": ('Bytes', 'Average'),
+                              "ReadIOPS": ('Count/Second', 'Average'),
+                              "WriteIOPS": ('Count/Second', 'Average'),
+                              "ReadLatency": ('Seconds', 'Average'),
+                              "WriteLatency": ('Seconds', 'Average'),
+                              "ReadThroughput": ('Bytes/Second', 'Average'),
+                              "WriteThroughput": ('Bytes/Second', 'Average'),
+                              "NetworkReceiveThroughput": ('Bytes/Second', 'Average'),
+                              "NetworkTransmitThroughput": ('Bytes/Second', 'Average')}
 
 EC2_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_EC2_ACCOUNT_NAME, 'VARCHAR(32)'),
                                                   (COLUMN_NAME_EC2_AMI_ID, 'VARCHAR(16)',),
@@ -173,4 +212,14 @@ ELB_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_ELB_ACCOUNT_NAME,
                                                   (COLUMN_NAME_ELB_VALUE, 'FLOAT'),
                                                   ])
 
-
+RDS_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_RDS_ACCOUNT_NAME, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_RDS_ENGINE, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_RDS_INSTANCE_CLASS, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_RDS_METRIC, 'VARCHAR(32)'),
+                                                  (COLUMN_NAME_RDS_MULTI_AZ, 'VARCHAR(5)'),
+                                                  (COLUMN_NAME_RDS_NAME, 'VARCHAR(64)'),
+                                                  (COLUMN_NAME_RDS_REGION, 'VARCHAR(16)'),
+                                                  (COLUMN_NAME_RDS_SECURITY_GRP, 'VARCHAR(64)'),
+                                                  (COLUMN_NAME_RDS_TIMESTAMP, 'DATETIME'),
+                                                  (COLUMN_NAME_RDS_VALUE, 'FLOAT'),
+                                                  ])
