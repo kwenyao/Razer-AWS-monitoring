@@ -8,9 +8,20 @@ import time
 import mysql.connector
 from elasticsearch import Elasticsearch
 
+def createId(resultDictionary, service):
+    primaryKeys = c.PRIMARY_KEY_DICTIONARY.get(service)
+    id = ''
+    for primaryKey in primaryKeys:
+        value = resultDictionary.get(primaryKey)
+        if isinstance(value, str):
+            id += value
+        else:
+            id += str(value)
+    id = id.replace(' ', '').lower()
+    return id
+
 def buildBulkBody(cursor, service):
-    columnAcctName, columnName, columnMetric, columnTimestamp = c.COLUMN_NAME_DICTIONARY.get(service)
-    if cursor is None:
+    if cursor.description is None:
         return None
     else:
         columns = tuple([d[0].decode('utf8') for d in cursor.description])
@@ -18,11 +29,7 @@ def buildBulkBody(cursor, service):
         for row in cursor:
             dictionary = {}
             resultDict = dict(zip(columns, row))
-            acctName = resultDict.get(columnAcctName)
-            name = resultDict.get(columnName)
-            metric = resultDict.get(columnMetric)
-            timestamp = func.convertDateTimeToString(resultDict.get(columnTimestamp))
-            id = (acctName + name + metric + timestamp).replace(' ', '')
+            id = createId(resultDict, service)
             dictionary['index'] = {"_id": id}
             queryResult.append(dictionary)
             queryResult.append(resultDict)
