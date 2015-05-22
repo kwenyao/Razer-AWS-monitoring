@@ -13,26 +13,22 @@ import shared_functions as func
 
 
 def initialiseConnections():
-    ec2connection = ec2.connect_to_region(c.EC2_REGION,
-                                          aws_access_key_id=c.ACCESS_KEY_ID,
-                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    elbconnection = elb.connect_to_region(c.ELB_REGION,
-                                          aws_access_key_id=c.ACCESS_KEY_ID,
-                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    rdsconnection = rds.connect_to_region(region_name=c.RDS_REGION,
-                                          aws_access_key_id=c.ACCESS_KEY_ID,
-                                          aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    cwConnection = cwatch.connect_to_region(c.EC2_REGION,
-                                            aws_access_key_id=c.ACCESS_KEY_ID,
-                                            aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # ec2connection = ec2.connect_to_region(c.EC2_REGION,
+    #                                       aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # rdsconnection = rds.connect_to_region(region_name=c.RDS_REGION,
+    #                                       aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
+    # cwConnection = cwatch.connect_to_region(c.EC2_REGION,
+    #                                         aws_access_key_id=c.ACCESS_KEY_ID,
+    #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
 
-    # ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
-    # elbconnection = elb.connect_to_region(region_name=c.ELB_REGION)
-    # rdsconnection = rds.connect_to_region(region_name=c.RDS_REGION)
-    # cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
+    ec2connection = ec2.connect_to_region(region_name=c.EC2_REGION)
+    rdsconnection = rds.connect_to_region(region_name=c.RDS_REGION)
+    cwConnection = cwatch.connect_to_region(region_name=c.EC2_REGION)
 
     mysqlConnection = func.connectToMySQLServer()
-    return ec2connection, elbconnection, rdsconnection, cwConnection, mysqlConnection
+    return ec2connection, rdsconnection, cwConnection, mysqlConnection
 
 def getMetricDictionary(service):
     if service == c.SERVICE_TYPE_EC2:
@@ -76,9 +72,10 @@ def getDataPoints(metric, start, end, service):
 
 def insertEC2DataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor):
     instanceId, metricString, virtType, instanceType, keyName, amiId = metricTuple
+    unit, statType = c.EC2_METRIC_UNIT_DICTIONARY.get(metricString)
     for datapoint in datapoints:
         timestamp = datapoint.get('Timestamp')
-        value = str(datapoint.get(c.EC2_METRIC_STAT_TYPE))
+        value = str(datapoint.get(statType))
         unit = datapoint.get('Unit')
         for group in securityGroups:
             securityGroup = str(group)[14:]
@@ -105,6 +102,8 @@ def insertELBDatapointsToDB(loadBalancerName, datapoints, metric, mysqlCursor):
             mysqlCursor.execute(s.ADD_ELB_DATAPOINTS(), data)
         except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
+    return
+
 
 def insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints, metric, mysqlCursor):
     unit, statType = c.RDS_METRIC_UNIT_DICTIONARY.get(metric)
@@ -124,6 +123,7 @@ def insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints, metric, mysq
                 mysqlCursor.execute(s.ADD_RDS_DATAPOINTS(), data)
             except mysql.connector.Error as err:
                 print("MYSQL Error: {}".format(err))
+    return
 
 
 
@@ -164,6 +164,7 @@ def insertELBMetricsToDB(metrics, mysqlConn):
         else:
             loadBalancerName = metric.dimensions.get('LoadBalancerName')[0].replace('-', '_')
             insertELBDatapointsToDB(loadBalancerName, datapoints, str(metric)[7:], mysqlCursor)
+    return
 
 
 def insertRDSMetricsToDB(metrics, instanceDict, mysqlConn):
@@ -183,8 +184,7 @@ def insertRDSMetricsToDB(metrics, instanceDict, mysqlConn):
             else:
                 instanceInfo = instanceDict.get(instanceName)
                 insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints, str(metric)[7:], mysqlCursor)
-
-
+    return
 
 
 def buildEC2SecurityGrpDictionary(ec2connection):
@@ -239,7 +239,7 @@ def addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn):
     insertEC2MetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn)
 
 
-def addAllELBDatapoints(elbConn, cwConn, mysqlConn):
+def addAllELBDatapoints(cwConn, mysqlConn):
     metrics = getAllMetrics(cwConn, c.SERVICE_TYPE_ELB)
     insertELBMetricsToDB(metrics, mysqlConn)
 
@@ -251,14 +251,16 @@ def addAllRDSDatapoints(rdsConn, cwConn, mysqlConn):
 
 
 def execute():
-    ec2Conn, elbConn, rdsConn, cwConn, mysqlConn = initialiseConnections()
+    ec2Conn, rdsConn, cwConn, mysqlConn = initialiseConnections()
     ec2Start = time.time()
-    # addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn)
+    addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn)
     ec2End = time.time()
     print "Time taken to add EC2 Datapoints: " + str(ec2End - ec2Start)
-    # addAllELBDatapoints(elbConn, cwConn, mysqlConn)
-    print "Time taken to add ELB Datapoints: " + str(time.time() - ec2End)
+    addAllELBDatapoints(cwConn, mysqlConn)
+    elbEnd = time.time()
+    print "Time taken to add ELB Datapoints: " + str(elbEnd - ec2End)
     addAllRDSDatapoints(rdsConn, cwConn, mysqlConn)
+    print "Time taken to add RDS Datapoints: " + str(time.time() - elbEnd)
     mysqlConn.commit()
     mysqlConn.close()
 
