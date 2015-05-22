@@ -36,6 +36,7 @@ MYSQL_HOST = 'localhost'
 DATABASE_NAME = 'monitoring'
 TABLE_NAME_EC2 = 'ec2datapoints'
 TABLE_NAME_ELB = 'elbdatapoints'
+TABLE_NAME_RDS = 'rdsdatapoints'
 COLUMN_NAME_EC2_ACCOUNT_NAME = 'account_name'
 COLUMN_NAME_EC2_AMI_ID = 'ami_id'
 COLUMN_NAME_EC2_INSTANCE_ID = 'instance_id'
@@ -68,6 +69,7 @@ COLUMN_NAME_RDS_NAME = 'name'
 COLUMN_NAME_RDS_REGION = 'region'
 COLUMN_NAME_RDS_SECURITY_GRP = 'security_group'
 COLUMN_NAME_RDS_TIMESTAMP = 'timestamp'
+COLUMN_NAME_RDS_UNIT = 'unit'
 COLUMN_NAME_RDS_VALUE = 'value'
 
 PRIMARY_KEYS_EC2 = [COLUMN_NAME_EC2_ACCOUNT_NAME,
@@ -105,7 +107,6 @@ KIBANA_PORT = "5601"
 # Service Constants
 ########################################################################
 
-EC2_METRIC_STAT_TYPE = 'Average'  # 'Minimum', 'Maximum', 'Sum', 'Average', 'SampleCount'
 SERVICE_TYPE_EC2 = 'EC2'
 SERVICE_TYPE_ELB = 'ELB'
 SERVICE_TYPE_RDS = 'RDS'
@@ -115,7 +116,7 @@ SERVICE_TYPE_RDS = 'RDS'
 # Elasticsearch Constants
 ########################################################################
 
-ELASTICSEARCH_INDEX_NAME = 'monitoring'
+ELASTICSEARCH_INDEX_NAME = DATABASE_NAME
 
 
 ########################################################################
@@ -124,12 +125,11 @@ ELASTICSEARCH_INDEX_NAME = 'monitoring'
 
 NAMESPACE_DICTIONARY = {SERVICE_TYPE_EC2: "AWS/EC2",
                         SERVICE_TYPE_ELB: "AWS/ELB",
-                        SERVICE_TYPE_RDS: "AWS/RDS"
-                        }
+                        SERVICE_TYPE_RDS: "AWS/RDS"}
 
 PRIMARY_KEY_DICTIONARY = {SERVICE_TYPE_EC2: PRIMARY_KEYS_EC2,
                           SERVICE_TYPE_ELB: PRIMARY_KEYS_ELB,
-                          }
+                          SERVICE_TYPE_RDS: PRIMARY_KEYS_RDS}
 
 EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
                               "CPUCreditUsage": (None, 'Average'),
@@ -221,5 +221,6 @@ RDS_DATAPOINT_ATTR_TYPE_DICTIONARY = OrderedDict([(COLUMN_NAME_RDS_ACCOUNT_NAME,
                                                   (COLUMN_NAME_RDS_REGION, 'VARCHAR(16)'),
                                                   (COLUMN_NAME_RDS_SECURITY_GRP, 'VARCHAR(64)'),
                                                   (COLUMN_NAME_RDS_TIMESTAMP, 'DATETIME'),
+                                                  (COLUMN_NAME_RDS_UNIT, 'VARCHAR(16)'),
                                                   (COLUMN_NAME_RDS_VALUE, 'FLOAT'),
                                                   ])

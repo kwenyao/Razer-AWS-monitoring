@@ -44,3 +44,10 @@ def createELBTable(cursor):
         cursor.execute(s.CREATE_ELB_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
+
+
+def createRDSTable(cursor):
+    try:
+        cursor.execute(s.CREATE_RDS_TABLE())
+    except mysql.connector.Error as err:
+            print("MYSQL Error: {}".format(err))
