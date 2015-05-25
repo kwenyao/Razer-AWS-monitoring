@@ -51,3 +51,7 @@ def createRDSTable(cursor):
         cursor.execute(s.CREATE_RDS_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
+
+
+def exists(it):
+    return it is not None

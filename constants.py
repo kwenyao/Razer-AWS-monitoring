@@ -3,30 +3,43 @@ __author__ = 'Koh Wen Yao'
 from collections import OrderedDict
 
 ########################################################################
-# Duration/Interval Constants
+# General Constants
 ########################################################################
 
 SCRIPT_RUN_INTERVAL_MINUTES = 3
 DATA_RETRIEVAL_BUFFER_MINUTES = 5
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
+REGION_POOL_SIZE = 9
+POOL_SIZE = 15
 
 
 ########################################################################
 # Authentication Constants
 ########################################################################
 
-# ACCESS_KEY_ID = 'AKIAIK7ZZMC6W7GM4SRA' # Test server
-# SECRET_ACCESS_KEY = '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' # Test Server
 ACCESS_KEY_ID = 'AKIAIVATWMBLGQRVYWRA'
 SECRET_ACCESS_KEY = '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'
-ACCOUNT_NAME = 'emily'
+
+
+PROFILE_NAME = 'maxine'
+ACCOUNT_NAME = PROFILE_NAME
+# [i.name for i in ec2connection.get_all_regions()] << USE THIS FUNCTION TO GET ALL REGIONS
+REGION_LIST = ['ap-northeast-1',
+               'ap-southeast-2',
+               'ap-southeast-1',
+               'eu-central-1',
+               'eu-west-1',
+               'sa-east-1',
+               'us-east-1',
+               'us-west-1',
+               'us-west-2']
 EC2_REGION = 'us-east-1'
 ELB_REGION = EC2_REGION
 RDS_REGION = EC2_REGION
+MYSQL_HOST = 'localhost'
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = 'root'
-MYSQL_HOST = 'localhost'
 
 
 ########################################################################
@@ -65,7 +78,7 @@ COLUMN_NAME_RDS_ENGINE = 'engine'
 COLUMN_NAME_RDS_INSTANCE_CLASS = 'instance_class'
 COLUMN_NAME_RDS_METRIC = 'metric'
 COLUMN_NAME_RDS_MULTI_AZ = 'multi_az'
-COLUMN_NAME_RDS_NAME = 'name'
+COLUMN_NAME_RDS_NAME = 'rds_name'
 COLUMN_NAME_RDS_REGION = 'region'
 COLUMN_NAME_RDS_SECURITY_GRP = 'security_group'
 COLUMN_NAME_RDS_TIMESTAMP = 'timestamp'
