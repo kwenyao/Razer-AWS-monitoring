@@ -22,8 +22,6 @@ class NoDaemonProcess(multiprocessing.Process):
     daemon = property(_get_daemon, _set_daemon)
 
 
-# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-# because the latter is only a wrapper function, not a proper class.
 class MyPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
 
@@ -39,11 +37,9 @@ def initialiseConnections(region):
     # cwConnection = cwatch.connect_to_region(region_name=region,
     #                                         aws_access_key_id=c.ACCESS_KEY_ID,
     #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
-
     ec2connection = ec2.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
     rdsconnection = rds.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
     cwConnection = cwatch.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-
     mysqlConnection = func.connectToMySQLServer()
     return ec2connection, rdsconnection, cwConnection, mysqlConnection
 
@@ -130,7 +126,6 @@ def insertEC2DataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor
         unit = datapoint.get('Unit')
         for group in securityGroups:
             securityGroup = str(group)[14:]
-            # REMEMBER TO CHECK ORDER AFTER INSERTING NEW COLUMNS
             data = (c.ACCOUNT_NAME, amiId, instanceId, instanceType, keyName, metricString, region,
                     securityGroup, c.SERVICE_TYPE_EC2, timestamp, unit, value, virtType)
             try:
@@ -228,7 +223,8 @@ def insertRDSMetricsToDB(metrics, instanceDict, mysqlConn, region):
             continue
         else:
             instanceInfo = instanceDict.get(instanceName)
-            insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints, str(metric)[7:], mysqlCursor, region)
+            insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints,
+                                    str(metric)[7:], mysqlCursor, region)
     return
 
 
@@ -301,20 +297,22 @@ def execute(region):
     startTime = time.time()
     regionString = region.replace("-", "_")
     ec2Conn, rdsConn, cwConn, mysqlConn = initialiseConnections(region)
-    ec2Start = time.time()
+    # ec2Start = time.time()
     addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn, regionString)
-    ec2End = time.time()
-    print "Time taken to add EC2 Datapoints (" + c.ACCOUNT_NAME + region + "): " + str(ec2End - ec2Start)
+    # ec2End = time.time()
+    # print "Time taken to add EC2 Datapoints (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(ec2End - ec2Start)
     addAllELBDatapoints(cwConn, mysqlConn, regionString)
-    elbEnd = time.time()
-    print "Time taken to add ELB Datapoints: (" + c.ACCOUNT_NAME + region + "): " + str(elbEnd - ec2End)
+    # elbEnd = time.time()
+    # print "Time taken to add ELB Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(elbEnd - ec2End)
     addAllRDSDatapoints(rdsConn, cwConn, mysqlConn, regionString)
-    print "Time taken to add RDS Datapoints: (" + c.ACCOUNT_NAME + region + "): " + str(time.time() - elbEnd)
+    # print "Time taken to add RDS Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - elbEnd)
     mysqlConn.commit()
     mysqlConn.close()
-    print "Execution Time: (" + c.ACCOUNT_NAME + region + "): " + str(time.time() - startTime)
+    print "Execution Time: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - startTime)
 
 
 if __name__ == "__main__":
+    startTime = time.time()
     pool = MyPool(c.REGION_POOL_SIZE)
     pool.map(execute, c.REGION_LIST)
+    print "Total Execution Time: (" + c.ACCOUNT_NAME + "): " + str(time.time() - startTime)

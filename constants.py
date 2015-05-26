@@ -10,17 +10,13 @@ SCRIPT_RUN_INTERVAL_MINUTES = 3
 DATA_RETRIEVAL_BUFFER_MINUTES = 5
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
-REGION_POOL_SIZE = 9
-POOL_SIZE = 15
+REGION_POOL_SIZE = 3
+POOL_SIZE = 5
 
 
 ########################################################################
 # Authentication Constants
 ########################################################################
-
-ACCESS_KEY_ID = 'AKIAIVATWMBLGQRVYWRA'
-SECRET_ACCESS_KEY = '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'
-
 
 PROFILE_NAME = 'maxine'
 ACCOUNT_NAME = PROFILE_NAME
@@ -34,9 +30,6 @@ REGION_LIST = ['ap-northeast-1',
                'us-east-1',
                'us-west-1',
                'us-west-2']
-EC2_REGION = 'us-east-1'
-ELB_REGION = EC2_REGION
-RDS_REGION = EC2_REGION
 MYSQL_HOST = 'localhost'
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = 'root'
@@ -47,9 +40,11 @@ MYSQL_PASSWORD = 'root'
 ########################################################################
 
 DATABASE_NAME = 'monitoring'
+
 TABLE_NAME_EC2 = 'ec2datapoints'
 TABLE_NAME_ELB = 'elbdatapoints'
 TABLE_NAME_RDS = 'rdsdatapoints'
+
 COLUMN_NAME_EC2_ACCOUNT_NAME = 'account_name'
 COLUMN_NAME_EC2_AMI_ID = 'ami_id'
 COLUMN_NAME_EC2_INSTANCE_ID = 'instance_id'
