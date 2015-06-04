@@ -12,6 +12,7 @@ import shared_functions as func
 import multiprocessing
 import multiprocessing.pool
 
+
 class NoDaemonProcess(multiprocessing.Process):
     # make 'daemon' attribute always return False
     def _get_daemon(self):
@@ -26,24 +27,25 @@ class MyPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
 
 
-def initialiseConnections(region):
+def initialise_connections(region):
     # FOR TESTING ON REMOTE MACHINE
     # ec2connection = ec2.connect_to_region(region_name=region,
     #                                       aws_access_key_id=c.ACCESS_KEY_ID,
     #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    # rdsconnection = rds.connect_to_region(region_name=region,
+    # rds_connection = rds.connect_to_region(region_name=region,
     #                                       aws_access_key_id=c.ACCESS_KEY_ID,
     #                                       aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    # cwConnection = cwatch.connect_to_region(region_name=region,
+    # cw_connection = cwatch.connect_to_region(region_name=region,
     #                                         aws_access_key_id=c.ACCESS_KEY_ID,
     #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
     ec2connection = ec2.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-    rdsconnection = rds.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-    cwConnection = cwatch.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-    mysqlConnection = func.connectToMySQLServer()
-    return ec2connection, rdsconnection, cwConnection, mysqlConnection
+    rds_connection = rds.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
+    cw_connection = cwatch.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
+    mysql_connection = func.connect_to_mysql_server()
+    return ec2connection, rds_connection, cw_connection, mysql_connection
 
-def getMetricDictionary(service):
+
+def get_metric_dictionary(service):
     if service == c.SERVICE_TYPE_EC2:
         return c.EC2_METRIC_UNIT_DICTIONARY
     elif service == c.SERVICE_TYPE_ELB:
@@ -51,46 +53,49 @@ def getMetricDictionary(service):
     elif service == c.SERVICE_TYPE_RDS:
         return c.RDS_METRIC_UNIT_DICTIONARY
 
-def filterMetricList(metricsList):
-    filteredMetricList = []
-    for metric in metricsList:
-        if not metric.dimensions.get("AvailabilityZone"):
-            filteredMetricList.append(metric)
-    return filteredMetricList
 
-def getAllMetrics(connection, service):
-    metricsList = []
+def filter_metric_list(metrics_list):
+    filtered_metric_list = []
+    for metric in metrics_list:
+        if not metric.dimensions.get("AvailabilityZone"):
+            filtered_metric_list.append(metric)
+    return filtered_metric_list
+
+
+def get_all_metrics(connection, service):
+    metrics_list = []
     namespace = c.NAMESPACE_DICTIONARY.get(service)
-    dictionary = getMetricDictionary(service)
+    dictionary = get_metric_dictionary(service)
     for metricName, (unit, statType) in dictionary.iteritems():
         if unit is not None:
             metrics = connection.list_metrics(namespace=namespace,
                                               metric_name=metricName)
-            nextToken = metrics.next_token
-            metricsList.extend(metrics)
-            while nextToken:
+            next_token = metrics.next_token
+            metrics_list.extend(metrics)
+            while next_token:
                 metrics = connection.list_metrics(namespace=namespace,
                                                   metric_name=metricName,
-                                                  next_token=nextToken)
-                nextToken = metrics.next_token
-                metricsList.extend(metrics)
-    return filterMetricList(metricsList)
+                                                  next_token=next_token)
+                next_token = metrics.next_token
+                metrics_list.extend(metrics)
+    return filter_metric_list(metrics_list)
 
 
-def queryDataPoints(metric, service):
+def query_data_points(metric, service):
     end = datetime.datetime.utcnow()
     start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
-    unitDict = getMetricDictionary(service)
-    unit, statType = unitDict.get(str(metric)[7:])
+    unit_dict = get_metric_dictionary(service)
+    unit, stat_type = unit_dict.get(str(metric)[7:])
     if unit is None:
         return None
     else:
-        return metric.query(start, end, statType, unit, period=60)
+        return metric.query(start, end, stat_type, unit, period=60)
+
 
 def ec2pool(metric):
     if metric.dimensions.get('InstanceId') is None:
         return
-    datapoints = queryDataPoints(metric, c.SERVICE_TYPE_EC2)
+    datapoints = query_data_points(metric, c.SERVICE_TYPE_EC2)
     if not datapoints:
         return
     else:
@@ -100,7 +105,7 @@ def ec2pool(metric):
 def elbpool(metric):
     if metric.dimensions.get('LoadBalancerName') is None:
         return
-    datapoints = queryDataPoints(metric, c.SERVICE_TYPE_ELB)
+    datapoints = query_data_points(metric, c.SERVICE_TYPE_ELB)
     if not datapoints:
         return
     else:
@@ -110,69 +115,69 @@ def elbpool(metric):
 def rdspool(metric):
     if metric.dimensions.get('DBInstanceIdentifier') is None:
         return
-    datapoints = queryDataPoints(metric, c.SERVICE_TYPE_RDS)
+    datapoints = query_data_points(metric, c.SERVICE_TYPE_RDS)
     if not datapoints:
         return
     else:
         return metric, datapoints
 
 
-def insertEC2DataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor, region):
-    instanceId, metricString, virtType, instanceType, keyName, amiId = metricTuple
-    unit, statType = c.EC2_METRIC_UNIT_DICTIONARY.get(metricString)
+def insert_ec2_datapoints_to_db(datapoints, security_groups, metric_tuple, mysql_cursor, region):
+    instance_id, metric_string, virt_type, instance_type, key_name, ami_id = metric_tuple
+    unit, stat_type = c.EC2_METRIC_UNIT_DICTIONARY.get(metric_string)
     for datapoint in datapoints:
         timestamp = datapoint.get('Timestamp')
-        value = str(datapoint.get(statType))
+        value = str(datapoint.get(stat_type))
         unit = datapoint.get('Unit')
-        for group in securityGroups:
-            securityGroup = str(group)[14:]
-            data = (c.ACCOUNT_NAME, amiId, instanceId, instanceType, keyName, metricString, region,
-                    securityGroup, c.SERVICE_TYPE_EC2, timestamp, unit, value, virtType)
+        for group in security_groups:
+            security_group = str(group)[14:]
+            data = (c.ACCOUNT_NAME, ami_id, instance_id, instance_type, key_name, metric_string, region,
+                    security_group, c.SERVICE_TYPE_EC2, timestamp, unit, value, virt_type)
             try:
-                mysqlCursor.execute(s.ADD_EC2_DATAPOINTS(), data)
+                mysql_cursor.execute(s.ADD_EC2_DATAPOINTS(), data)
             except mysql.connector.Error as err:
                 # continue
                 print("MYSQL Error: {}".format(err))
     return
 
 
-def insertELBDatapointsToDB(loadBalancerName, datapoints, metric, mysqlCursor, region):
-    unit, statType = c.ELB_METRIC_UNIT_DICTIONARY.get(metric)
+def insert_elb_datapoints_to_db(load_balancer_name, datapoints, metric, mysql_cursor, region):
+    unit, stat_type = c.ELB_METRIC_UNIT_DICTIONARY.get(metric)
     for datapoint in datapoints:
         timestamp = datapoint.get('Timestamp')
-        value = datapoint.get(statType)
+        value = datapoint.get(stat_type)
         unit = datapoint.get('Unit')
-        data = (c.ACCOUNT_NAME, loadBalancerName, metric, region,
+        data = (c.ACCOUNT_NAME, load_balancer_name, metric, region,
                 c.SERVICE_TYPE_ELB, timestamp, unit, value)
         try:
-            mysqlCursor.execute(s.ADD_ELB_DATAPOINTS(), data)
+            mysql_cursor.execute(s.ADD_ELB_DATAPOINTS(), data)
         except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
     return
 
 
-def insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints, metric, mysqlCursor, region):
-    unit, statType = c.RDS_METRIC_UNIT_DICTIONARY.get(metric)
-    multiAZ = instanceInfo.get(c.COLUMN_NAME_RDS_MULTI_AZ)
-    securityGroups = instanceInfo.get(c.COLUMN_NAME_RDS_SECURITY_GRP)
-    engine = instanceInfo.get(c.COLUMN_NAME_RDS_ENGINE)
-    instanceClass = instanceInfo.get(c.COLUMN_NAME_RDS_INSTANCE_CLASS)
+def insert_rds_datapoints_to_db(instance_name, instance_info, datapoints, metric, mysql_cursor, region):
+    unit, stat_type = c.RDS_METRIC_UNIT_DICTIONARY.get(metric)
+    multi_az = instance_info.get(c.COLUMN_NAME_RDS_MULTI_AZ)
+    security_groups = instance_info.get(c.COLUMN_NAME_RDS_SECURITY_GRP)
+    engine = instance_info.get(c.COLUMN_NAME_RDS_ENGINE)
+    instance_class = instance_info.get(c.COLUMN_NAME_RDS_INSTANCE_CLASS)
     for datapoint in datapoints:
         timestamp = datapoint.get('Timestamp')
-        value = datapoint.get(statType)
+        value = datapoint.get(stat_type)
         unit = datapoint.get('Unit')
-        for securityGroup in securityGroups:
-            securityGroupString = str(securityGroup)
-            data = (c.ACCOUNT_NAME, engine, instanceClass, metric, multiAZ,
-                    instanceName, region, securityGroupString, timestamp, unit, value)
+        for securityGroup in security_groups:
+            security_group_string = str(securityGroup)
+            data = (c.ACCOUNT_NAME, engine, instance_class, metric, multi_az,
+                    instance_name, region, security_group_string, timestamp, unit, value)
             try:
-                mysqlCursor.execute(s.ADD_RDS_DATAPOINTS(), data)
+                mysql_cursor.execute(s.ADD_RDS_DATAPOINTS(), data)
             except mysql.connector.Error as err:
                 print("MYSQL Error: {}".format(err))
     return
 
 
-def getAllDataPoints(metrics, service):
+def get_all_datapoints(metrics, service):
     if service == c.SERVICE_TYPE_EC2:
         function = ec2pool
     elif service == c.SERVICE_TYPE_ELB:
@@ -183,132 +188,134 @@ def getAllDataPoints(metrics, service):
         return
     pool = multiprocessing.Pool(c.POOL_SIZE)
     datalist = pool.map(function, metrics)
-    filteredList = filter(func.exists, datalist)
-    return filteredList
+    filtered_list = filter(func.exists, datalist)
+    return filtered_list
 
 
-def insertEC2MetricsToDB(metrics, securityGrpDict, instanceInfo, mysqlConn, region):
-    mysqlCursor = mysqlConn.cursor()
-    func.createEC2Table(mysqlCursor)
-    dataList = getAllDataPoints(metrics, c.SERVICE_TYPE_EC2)
-    for metric, datapoints in dataList:
-        instanceId = metric.dimensions.get('InstanceId')[0].replace('-', '_')
-        if instanceInfo.get(instanceId) is None:
+def insert_ec2_metrics_to_db(metrics, security_grp_dict, instance_info, mysql_conn, region):
+    mysql_cursor = mysql_conn.cursor()
+    func.create_ec2_table(mysql_cursor)
+    data_list = get_all_datapoints(metrics, c.SERVICE_TYPE_EC2)
+    for metric, datapoints in data_list:
+        instance_id = metric.dimensions.get('InstanceId')[0].replace('-', '_')
+        if instance_info.get(instance_id) is None:
             continue
         else:
-            securityGroups = securityGrpDict.get(instanceId)
-            metricString = str(metric)[7:]
-            metricTuple = (instanceId, metricString) + instanceInfo.get(instanceId)
-            insertEC2DataPointsToDB(datapoints, securityGroups, metricTuple, mysqlCursor, region)
+            security_groups = security_grp_dict.get(instance_id)
+            metric_string = str(metric)[7:]
+            metric_tuple = (instance_id, metric_string) + instance_info.get(instance_id)
+            insert_ec2_datapoints_to_db(datapoints, security_groups, metric_tuple, mysql_cursor, region)
     return
 
 
-def insertELBMetricsToDB(metrics, mysqlConn, region):
-    mysqlCursor = mysqlConn.cursor()
-    func.createELBTable(mysqlCursor)
-    dataList = getAllDataPoints(metrics, c.SERVICE_TYPE_ELB)
-    for metric, datapoints in dataList:
-        loadBalancerName = metric.dimensions.get('LoadBalancerName')[0].replace('-', '_')
-        insertELBDatapointsToDB(loadBalancerName, datapoints, str(metric)[7:], mysqlCursor, region)
+def insert_elb_metrics_to_db(metrics, mysql_conn, region):
+    mysql_cursor = mysql_conn.cursor()
+    func.create_elb_table(mysql_cursor)
+    data_list = get_all_datapoints(metrics, c.SERVICE_TYPE_ELB)
+    for metric, datapoints in data_list:
+        load_balancer_name = metric.dimensions.get('LoadBalancerName')[0].replace('-', '_')
+        insert_elb_datapoints_to_db(load_balancer_name, datapoints, str(metric)[7:], mysql_cursor, region)
     return
 
 
-def insertRDSMetricsToDB(metrics, instanceDict, mysqlConn, region):
-    mysqlCursor = mysqlConn.cursor()
-    func.createRDSTable(mysqlCursor)
-    dataList = getAllDataPoints(metrics, c.SERVICE_TYPE_RDS)
-    for metric, datapoints in dataList:
-        instanceName = metric.dimensions.get('DBInstanceIdentifier')[0].replace('-', '_')
+def insert_rds_metrics_to_db(metrics, instance_dict, mysql_conn, region):
+    mysql_cursor = mysql_conn.cursor()
+    func.create_rds_table(mysql_cursor)
+    data_list = get_all_datapoints(metrics, c.SERVICE_TYPE_RDS)
+    for metric, datapoints in data_list:
+        instance_name = metric.dimensions.get('DBInstanceIdentifier')[0].replace('-', '_')
         if datapoints is None:
             continue
         else:
-            instanceInfo = instanceDict.get(instanceName)
-            insertRDSDatapointsToDB(instanceName, instanceInfo, datapoints,
-                                    str(metric)[7:], mysqlCursor, region)
+            instance_info = instance_dict.get(instance_name)
+            insert_rds_datapoints_to_db(instance_name, instance_info, datapoints,
+                                        str(metric)[7:], mysql_cursor, region)
     return
 
 
-def buildEC2SecurityGrpDictionary(ec2connection):
-    securityGroups = ec2connection.get_all_security_groups()
-    securityGrpDict = {}
-    for group in securityGroups:
+def build_ec2_security_grp_dictionary(ec2connection):
+    security_groups = ec2connection.get_all_security_groups()
+    security_grp_dict = {}
+    for group in security_groups:
         instances = group.instances()
         if instances:
             for instance in instances:
                 if instance.state == 'running':
-                    instanceId = str(instance)[9:].replace('-', '_')
-                    securityGrpList = securityGrpDict.get(instanceId)
-                    if securityGrpList is None:
-                        securityGrpList = [group]
-                        securityGrpDict[instanceId] = securityGrpList
+                    instance_id = str(instance)[9:].replace('-', '_')
+                    security_grp_list = security_grp_dict.get(instance_id)
+                    if security_grp_list is None:
+                        security_grp_list = [group]
+                        security_grp_dict[instance_id] = security_grp_list
                     else:
-                        securityGrpList.append(group)
-                        securityGrpDict[instanceId] = securityGrpList
-    return securityGrpDict
+                        security_grp_list.append(group)
+                        security_grp_dict[instance_id] = security_grp_list
+    return security_grp_dict
 
-def extractEC2Instances(connection):
+
+def extract_ec2_instances(connection):
     filter = {'instance-state-name': 'running'}
-    reservationList = connection.get_all_instances(filters=filter)
-    instanceInfo = {}
-    instanceList = []
-    for reservation in reservationList:
+    reservation_list = connection.get_all_instances(filters=filter)
+    instance_info = {}
+    instance_list = []
+    for reservation in reservation_list:
         instance = reservation.instances[0]
-        instanceTuple = (instance.virtualization_type, instance.instance_type,
-                         instance.key_name, instance.image_id.replace('-', '_'))
-        instanceInfo[instance.id.replace('-', '_')] = instanceTuple
-        instanceList.append(instance.id)
-    return instanceList, instanceInfo
+        instance_tuple = (instance.virtualization_type, instance.instance_type,
+                          instance.key_name, instance.image_id.replace('-', '_'))
+        instance_info[instance.id.replace('-', '_')] = instance_tuple
+        instance_list.append(instance.id)
+    return instance_list, instance_info
 
 
-def extractDBInstances(rdsConn):
-    instances = rdsConn.get_all_dbinstances()
-    instanceDict = {}
+def extract_db_instances(rds_conn):
+    instances = rds_conn.get_all_dbinstances()
+    instance_dict = {}
     for instance in instances:
-        instanceInfo = {}
-        instanceInfo[c.COLUMN_NAME_RDS_MULTI_AZ] = instance.multi_az
-        instanceInfo[c.COLUMN_NAME_RDS_SECURITY_GRP] = instance.security_groups
-        instanceInfo[c.COLUMN_NAME_RDS_ENGINE] = instance.engine
-        instanceInfo[c.COLUMN_NAME_RDS_INSTANCE_CLASS] = instance.instance_class
-        instanceDict[instance.id] = instanceInfo
-    return instanceDict
+        instance_info = {c.COLUMN_NAME_RDS_MULTI_AZ: instance.multi_az,
+                         c.COLUMN_NAME_RDS_SECURITY_GRP: instance.security_groups,
+                         c.COLUMN_NAME_RDS_ENGINE: instance.engine,
+                         c.COLUMN_NAME_RDS_INSTANCE_CLASS: instance.instance_class
+                         }
+        instance_dict[instance.id] = instance_info
+    return instance_dict
 
 
-def addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn, region):
-    securityGrpDictionary = buildEC2SecurityGrpDictionary(ec2Conn)
-    instanceList, instanceInfo = extractEC2Instances(ec2Conn)
-    metrics = getAllMetrics(cwConn, c.SERVICE_TYPE_EC2)
-    insertEC2MetricsToDB(metrics, securityGrpDictionary, instanceInfo, mysqlConn, region)
+def add_all_ec2_datapoints(ec2_conn, cw_conn, mysql_conn, region):
+    security_grp_dictionary = build_ec2_security_grp_dictionary(ec2_conn)
+    instance_list, instance_info = extract_ec2_instances(ec2_conn)
+    metrics = get_all_metrics(cw_conn, c.SERVICE_TYPE_EC2)
+    insert_ec2_metrics_to_db(metrics, security_grp_dictionary, instance_info, mysql_conn, region)
     return
 
 
-def addAllELBDatapoints(cwConn, mysqlConn, region):
-    metrics = getAllMetrics(cwConn, c.SERVICE_TYPE_ELB)
-    insertELBMetricsToDB(metrics, mysqlConn, region)
+def add_all_elb_datapoints(cw_conn, mysql_conn, region):
+    metrics = get_all_metrics(cw_conn, c.SERVICE_TYPE_ELB)
+    insert_elb_metrics_to_db(metrics, mysql_conn, region)
     return
 
 
-def addAllRDSDatapoints(rdsConn, cwConn, mysqlConn, region):
-    metrics = getAllMetrics(cwConn, c.SERVICE_TYPE_RDS)
-    instanceDict = extractDBInstances(rdsConn)
-    insertRDSMetricsToDB(metrics, instanceDict, mysqlConn, region)
+def add_all_rds_datapoints(rds_conn, cw_conn, mysql_conn, region):
+    metrics = get_all_metrics(cw_conn, c.SERVICE_TYPE_RDS)
+    instance_dict = extract_db_instances(rds_conn)
+    insert_rds_metrics_to_db(metrics, instance_dict, mysql_conn, region)
     return
+
 
 def execute(region):
-    startTime = time.time()
-    regionString = region.replace("-", "_")
-    ec2Conn, rdsConn, cwConn, mysqlConn = initialiseConnections(region)
+    start_time = time.time()
+    region_string = region.replace("-", "_")
+    ec2_conn, rds_conn, cw_conn, mysql_conn = initialise_connections(region)
     # ec2Start = time.time()
-    addAllEC2Datapoints(ec2Conn, cwConn, mysqlConn, regionString)
+    add_all_ec2_datapoints(ec2_conn, cw_conn, mysql_conn, region_string)
     # ec2End = time.time()
     # print "Time taken to add EC2 Datapoints (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(ec2End - ec2Start)
-    addAllELBDatapoints(cwConn, mysqlConn, regionString)
+    add_all_elb_datapoints(cw_conn, mysql_conn, region_string)
     # elbEnd = time.time()
     # print "Time taken to add ELB Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(elbEnd - ec2End)
-    addAllRDSDatapoints(rdsConn, cwConn, mysqlConn, regionString)
+    add_all_rds_datapoints(rds_conn, cw_conn, mysql_conn, region_string)
     # print "Time taken to add RDS Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - elbEnd)
-    mysqlConn.commit()
-    mysqlConn.close()
-    print "Execution Time: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - startTime)
+    mysql_conn.commit()
+    mysql_conn.close()
+    print "Execution Time: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - start_time)
 
 
 if __name__ == "__main__":

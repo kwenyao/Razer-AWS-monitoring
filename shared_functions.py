@@ -7,20 +7,20 @@ import mysql_statements as s
 from warnings import filterwarnings
 
 
-def connectToMySQLServer():
-    createDatabase()
+def connect_to_mysql_server():
+    create_database()
     connection = mysql.connector.connect(user=c.MYSQL_USER, password=c.MYSQL_PASSWORD,
                                          host=c.MYSQL_HOST,
                                          database=c.DATABASE_NAME)
     return connection
 
 
-def convertDateTimeToString(datetimeVar):
-    datetimeString = datetimeVar.strftime("%Y/%m/%d %H:%M:%S")
-    return datetimeString
+def convert_date_time_to_string(datetime_var):
+    datetime_string = datetime_var.strftime("%Y/%m/%d %H:%M:%S")
+    return datetime_string
 
 
-def createDatabase():
+def create_database():
     filterwarnings('ignore', category=MySQLdb.Warning)
     connection = MySQLdb.connect(host=c.MYSQL_HOST, user=c.MYSQL_USER, passwd=c.MYSQL_PASSWORD)
     cursor = connection.cursor()
@@ -32,21 +32,21 @@ def createDatabase():
     connection.close()
 
 
-def createEC2Table(cursor):
+def create_ec2_table(cursor):
     try:
         cursor.execute(s.CREATE_EC2_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
 
 
-def createELBTable(cursor):
+def create_elb_table(cursor):
     try:
         cursor.execute(s.CREATE_ELB_TABLE())
     except mysql.connector.Error as err:
             print("MYSQL Error: {}".format(err))
 
 
-def createRDSTable(cursor):
+def create_rds_table(cursor):
     try:
         cursor.execute(s.CREATE_RDS_TABLE())
     except mysql.connector.Error as err:

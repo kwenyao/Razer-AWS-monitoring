@@ -11,14 +11,14 @@ DATA_RETRIEVAL_BUFFER_MINUTES = 5
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
 REGION_POOL_SIZE = 3
-POOL_SIZE = 5
+POOL_SIZE = 2
 
 
 ########################################################################
 # Authentication Constants
 ########################################################################
 
-PROFILE_NAME = 'maxine'
+PROFILE_NAME = 'voip'
 ACCOUNT_NAME = PROFILE_NAME
 # [i.name for i in ec2connection.get_all_regions()] << USE THIS FUNCTION TO GET ALL REGIONS
 REGION_LIST = ['ap-northeast-1',
@@ -107,7 +107,7 @@ PRIMARY_KEYS_RDS = [COLUMN_NAME_ELB_ACCOUNT_NAME,
 
 ELASTICSEARCH_HOST = 'localhost'
 ELASTICSEARCH_PORT = '9200'
-ELASTICSEARCH_URL = 'http://' + ELASTICSEARCH_HOST + ':' + ELASTICSEARCH_PORT
+ELASTICSEARCH_URL = 'http://{0}:{1}'.format(ELASTICSEARCH_HOST, ELASTICSEARCH_PORT)
 KIBANA_PORT = "5601"
 
 
