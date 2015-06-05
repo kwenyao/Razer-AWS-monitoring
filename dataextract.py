@@ -3,14 +3,15 @@ __author__ = 'Koh Wen Yao'
 import boto.ec2 as ec2
 import boto.ec2.cloudwatch as cwatch
 import boto.rds as rds
-import datetime
-import time
 import constants as c
+import datetime
+import multiprocessing
+import multiprocessing.pool
 import mysql.connector
 import mysql_statements as s
 import shared_functions as func
-import multiprocessing
-import multiprocessing.pool
+import sys
+import time
 
 
 class NoDaemonProcess(multiprocessing.Process):
@@ -38,9 +39,9 @@ def initialise_connections(region):
     # cw_connection = cwatch.connect_to_region(region_name=region,
     #                                         aws_access_key_id=c.ACCESS_KEY_ID,
     #                                         aws_secret_access_key=c.SECRET_ACCESS_KEY)
-    ec2connection = ec2.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-    rds_connection = rds.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
-    cw_connection = cwatch.connect_to_region(region_name=region, profile_name=c.PROFILE_NAME)
+    ec2connection = ec2.connect_to_region(region_name=region, profile_name=sys.argv[1])
+    rds_connection = rds.connect_to_region(region_name=region, profile_name=sys.argv[1])
+    cw_connection = cwatch.connect_to_region(region_name=region, profile_name=sys.argv[1])
     mysql_connection = func.connect_to_mysql_server()
     return ec2connection, rds_connection, cw_connection, mysql_connection
 
@@ -131,7 +132,7 @@ def insert_ec2_datapoints_to_db(datapoints, security_groups, metric_tuple, mysql
         unit = datapoint.get('Unit')
         for group in security_groups:
             security_group = str(group)[14:]
-            data = (c.ACCOUNT_NAME, ami_id, instance_id, instance_type, key_name, metric_string, region,
+            data = (sys.argv[1], ami_id, instance_id, instance_type, key_name, metric_string, region,
                     security_group, c.SERVICE_TYPE_EC2, timestamp, unit, value, virt_type)
             try:
                 mysql_cursor.execute(s.ADD_EC2_DATAPOINTS(), data)
@@ -147,7 +148,7 @@ def insert_elb_datapoints_to_db(load_balancer_name, datapoints, metric, mysql_cu
         timestamp = datapoint.get('Timestamp')
         value = datapoint.get(stat_type)
         unit = datapoint.get('Unit')
-        data = (c.ACCOUNT_NAME, load_balancer_name, metric, region,
+        data = (sys.argv[1], load_balancer_name, metric, region,
                 c.SERVICE_TYPE_ELB, timestamp, unit, value)
         try:
             mysql_cursor.execute(s.ADD_ELB_DATAPOINTS(), data)
@@ -168,7 +169,7 @@ def insert_rds_datapoints_to_db(instance_name, instance_info, datapoints, metric
         unit = datapoint.get('Unit')
         for securityGroup in security_groups:
             security_group_string = str(securityGroup)
-            data = (c.ACCOUNT_NAME, engine, instance_class, metric, multi_az,
+            data = (sys.argv[1], engine, instance_class, metric, multi_az,
                     instance_name, region, security_group_string, timestamp, unit, value)
             try:
                 mysql_cursor.execute(s.ADD_RDS_DATAPOINTS(), data)
@@ -186,7 +187,8 @@ def get_all_datapoints(metrics, service):
         function = rdspool
     else:
         return
-    pool = multiprocessing.Pool(c.POOL_SIZE)
+    account_name = sys.argv[1]
+    pool = multiprocessing.Pool(c.POOL_DICTIONARY.get(account_name))
     datalist = pool.map(function, metrics)
     filtered_list = filter(func.exists, datalist)
     return filtered_list
@@ -304,22 +306,24 @@ def execute(region):
     start_time = time.time()
     region_string = region.replace("-", "_")
     ec2_conn, rds_conn, cw_conn, mysql_conn = initialise_connections(region)
-    # ec2Start = time.time()
     add_all_ec2_datapoints(ec2_conn, cw_conn, mysql_conn, region_string)
-    # ec2End = time.time()
-    # print "Time taken to add EC2 Datapoints (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(ec2End - ec2Start)
     add_all_elb_datapoints(cw_conn, mysql_conn, region_string)
-    # elbEnd = time.time()
-    # print "Time taken to add ELB Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(elbEnd - ec2End)
     add_all_rds_datapoints(rds_conn, cw_conn, mysql_conn, region_string)
-    # print "Time taken to add RDS Datapoints: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - elbEnd)
     mysql_conn.commit()
     mysql_conn.close()
-    print "Execution Time: (" + c.ACCOUNT_NAME + ' ' + region + "): " + str(time.time() - start_time)
+    print "Execution Time: ({0} {1}): {2}".format(sys.argv[1], region, str(time.time() - start_time))
 
 
 if __name__ == "__main__":
-    startTime = time.time()
-    pool = MyPool(c.REGION_POOL_SIZE)
-    pool.map(execute, c.REGION_LIST)
-    print "Total Execution Time: (" + c.ACCOUNT_NAME + "): " + str(time.time() - startTime)
+    accountName = sys.argv[1]
+    if accountName:
+        startTime = time.time()
+        regionPoolSize = c.REGION_POOL_DICTIONARY.get(accountName)
+        if regionPoolSize:
+            pool = MyPool(regionPoolSize)
+            pool.map(execute, c.REGION_LIST)
+            print "Total Execution Time: ({0}): {1}".format(accountName, str(time.time() - startTime))
+        else:
+            print 'Invalid account name'
+    else:
+        print 'Please enter account name as input argument'

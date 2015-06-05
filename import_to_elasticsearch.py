@@ -50,7 +50,7 @@ def push_data_to_elasticsearch(query_result, service):
 def get_data_from_db(cursor):
     now_time = datetime.datetime.utcnow()
     start_time = now_time - datetime.timedelta(minutes=c.DATA_RETRIEVAL_TIME_DELTA_MINUTES)
-    start_time_string = func.convert_date_time_to_string(start_time)
+    start_time_string = func.convert_datetime_to_string(start_time)
     for service, query in s.DATA_RETRIEVAL_DICTIONARY.iteritems():
         print "pushing " + service + " data into elasticsearch"
         try:

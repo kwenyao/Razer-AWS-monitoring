@@ -10,16 +10,12 @@ SCRIPT_RUN_INTERVAL_MINUTES = 3
 DATA_RETRIEVAL_BUFFER_MINUTES = 5
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
-REGION_POOL_SIZE = 3
-POOL_SIZE = 2
 
 
 ########################################################################
 # Authentication Constants
 ########################################################################
 
-PROFILE_NAME = 'voip'
-ACCOUNT_NAME = PROFILE_NAME
 # [i.name for i in ec2connection.get_all_regions()] << USE THIS FUNCTION TO GET ALL REGIONS
 REGION_LIST = ['ap-northeast-1',
                'ap-southeast-2',
@@ -130,6 +126,14 @@ ELASTICSEARCH_INDEX_NAME = DATABASE_NAME
 ########################################################################
 # Dictionaries
 ########################################################################
+
+REGION_POOL_DICTIONARY = {'emily': 3,
+                          'maxine': 2,
+                          'voip': 3}
+
+POOL_DICTIONARY = {'emily': 9,
+                   'maxine': 2,
+                   'voip': 2}
 
 NAMESPACE_DICTIONARY = {SERVICE_TYPE_EC2: "AWS/EC2",
                         SERVICE_TYPE_ELB: "AWS/ELB",

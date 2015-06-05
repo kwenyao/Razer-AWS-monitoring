@@ -15,7 +15,7 @@ def connect_to_mysql_server():
     return connection
 
 
-def convert_date_time_to_string(datetime_var):
+def convert_datetime_to_string(datetime_var):
     datetime_string = datetime_var.strftime("%Y/%m/%d %H:%M:%S")
     return datetime_string
 
