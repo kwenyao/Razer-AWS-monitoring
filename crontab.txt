@@ -1,0 +1,5 @@
+﻿* * * * * /usr/bin/python /home/ubuntu/monitoringscripts/dataextract.py emily>> /home/ubuntu/monitoringscripts/extractdata.log 2>&1
+* * * * * /usr/bin/python /home/ubuntu/monitoringscripts/dataextract.py voip>> /home/ubuntu/monitoringscripts/extractdata.log 2>&1
+* * * * * /usr/bin/python /home/ubuntu/monitoringscripts/dataextract.py maxine >> /home/ubuntu/monitoringscripts/extractdata.log 2>&1
+
+* * * * * /usr/bin/python /home/ubuntu/monitoringscripts/import_to_elasticsearch.py >> /home/ubuntu/monitoringscripts/elasticsearch.log 2>&1
