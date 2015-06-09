@@ -6,10 +6,11 @@ from collections import OrderedDict
 # General Constants
 ########################################################################
 
-SCRIPT_RUN_INTERVAL_MINUTES = 3
-DATA_RETRIEVAL_BUFFER_MINUTES = 5
+SCRIPT_RUN_INTERVAL_MINUTES = 1
+DATA_RETRIEVAL_BUFFER_MINUTES = 3
 MONITORING_TIME_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES
 DATA_RETRIEVAL_TIME_DELTA_MINUTES = SCRIPT_RUN_INTERVAL_MINUTES + DATA_RETRIEVAL_BUFFER_MINUTES
+ROWS_TO_FETCH = 2000  # REDUCE IF THERE ARE TIMEOUT ERRORS WHILE IMPORTING TO ELASTICSEARCH
 
 
 ########################################################################
@@ -143,6 +144,7 @@ PRIMARY_KEY_DICTIONARY = {SERVICE_TYPE_EC2: PRIMARY_KEYS_EC2,
                           SERVICE_TYPE_ELB: PRIMARY_KEYS_ELB,
                           SERVICE_TYPE_RDS: PRIMARY_KEYS_RDS}
 
+# CHANGE NONE TO A SUITABLE UNIT TO ENABLE MONITORING OF THE PARTICULAR METRIC
 EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
                               "CPUCreditUsage": (None, 'Average'),
                               "CPUUtilization": ('Percent', 'Average'),
@@ -165,6 +167,7 @@ EC2_METRIC_UNIT_DICTIONARY = {"CPUCreditBalance": (None, 'Average'),
                               "VolumeWriteOps": (None, 'Average')
                               }
 
+# CHANGE NONE TO A SUITABLE UNIT TO ENABLE MONITORING OF THE PARTICULAR METRIC
 ELB_METRIC_UNIT_DICTIONARY = {"BackendConnectionErrors": (None, 'Sum'),
                               "HealthyHostCount": ('Count', 'Average'),
                               "HTTPCode_Backend_2XX": ('Count', 'Sum'),
@@ -180,6 +183,7 @@ ELB_METRIC_UNIT_DICTIONARY = {"BackendConnectionErrors": (None, 'Sum'),
                               "UnHealthyHostCount": ('Count', 'Average')
                               }
 
+# CHANGE NONE TO A SUITABLE UNIT TO ENABLE MONITORING OF THE PARTICULAR METRIC
 RDS_METRIC_UNIT_DICTIONARY = {"BinLogDiskUsage": ('Bytes', 'Average'),
                               "CPUUtilization": ('Percent', 'Average'),
                               "CPUCreditUsage":  (None, 'Average'),

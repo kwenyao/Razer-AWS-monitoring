@@ -53,6 +53,8 @@ def get_metric_dictionary(service):
         return c.ELB_METRIC_UNIT_DICTIONARY
     elif service == c.SERVICE_TYPE_RDS:
         return c.RDS_METRIC_UNIT_DICTIONARY
+    else:
+        return None
 
 
 def filter_metric_list(metrics_list):
@@ -67,6 +69,8 @@ def get_all_metrics(connection, service):
     metrics_list = []
     namespace = c.NAMESPACE_DICTIONARY.get(service)
     dictionary = get_metric_dictionary(service)
+    if dictionary is None:
+        return
     for metricName, (unit, statType) in dictionary.iteritems():
         if unit is not None:
             metrics = connection.list_metrics(namespace=namespace,
@@ -86,6 +90,8 @@ def query_data_points(metric, service):
     end = datetime.datetime.utcnow()
     start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
     unit_dict = get_metric_dictionary(service)
+    if unit_dict is None:
+        return
     unit, stat_type = unit_dict.get(str(metric)[7:])
     if unit is None:
         return None
@@ -312,6 +318,7 @@ def execute(region):
     mysql_conn.commit()
     mysql_conn.close()
     print "Execution Time: ({0} {1}): {2}".format(sys.argv[1], region, str(time.time() - start_time))
+    return
 
 
 if __name__ == "__main__":

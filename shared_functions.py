@@ -9,7 +9,8 @@ from warnings import filterwarnings
 
 def connect_to_mysql_server():
     create_database()
-    connection = mysql.connector.connect(user=c.MYSQL_USER, password=c.MYSQL_PASSWORD,
+    connection = mysql.connector.connect(user=c.MYSQL_USER,
+                                         password=c.MYSQL_PASSWORD,
                                          host=c.MYSQL_HOST,
                                          database=c.DATABASE_NAME)
     return connection
