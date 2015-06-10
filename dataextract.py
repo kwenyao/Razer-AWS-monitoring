@@ -87,8 +87,14 @@ def get_all_metrics(connection, service):
 
 
 def query_data_points(metric, service):
-    end = datetime.datetime.utcnow()
-    start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
+    if len(sys.argv) > 5:
+        start_string = sys.argv[2] + ' ' + sys.argv[3]
+        end_string = sys.argv[4] + ' ' + sys.argv[5]
+        start = datetime.datetime.strptime(start_string, '%Y/%m/%d %H:%M')
+        end = datetime.datetime.strptime(end_string, '%Y/%m/%d %H:%M')
+    else:
+        end = datetime.datetime.utcnow()
+        start = end - datetime.timedelta(minutes=c.MONITORING_TIME_MINUTES)
     unit_dict = get_metric_dictionary(service)
     if unit_dict is None:
         return
@@ -322,8 +328,8 @@ def execute(region):
 
 
 if __name__ == "__main__":
-    accountName = sys.argv[1]
-    if accountName:
+    if len(sys.argv) > 1:
+        accountName = sys.argv[1]
         startTime = time.time()
         regionPoolSize = c.REGION_POOL_DICTIONARY.get(accountName)
         if regionPoolSize:
