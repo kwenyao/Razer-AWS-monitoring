@@ -1,0 +1,17 @@
+- dataextract.py
+	- first argument must be account name (i.e. python dataextract.py <Account Name>)
+	- take note that .boto file must be configured with account name and credentials before this can work
+	- 2nd - 5th argument is date time date time (optional)
+	- 2nd and 3rd argument is start date and start time respectively
+	- 4th and 5th argument is end date and end time respectively
+	- all date should be in the format YYYY/MM/DD
+	- all time should be in the format HH:MM
+	- if start date is specified, end date and time must also be specified
+	- examples of input: 
+		- python dataextract.py emily 2015/06/30 09:59 2015/06/30 10:09
+		- python dataextract.py emily
+
+-import_to_elasticsearch.py
+	- an optional argument 'all' can be added to import the entire database
+	- example of input:
+		- python import_to_elasticsearch.py all
